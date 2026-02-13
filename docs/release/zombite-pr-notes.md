@@ -16,6 +16,10 @@
   - `normal`: `05:46`
   - `hard`: `08:03`
 
+## Manual playtest
+- Runbook: `docs/runbook/zombite-manual-playtest.md`
+- Log template: `docs/release/zombite-playtest-log.md`
+
 ## Risks / follow-up
 - Live gameplay feel still requires manual playtest in a browser to confirm perceived fairness and aim pressure by skill band.
 - Recommend adding browser-driven integration tests (Playwright) in a future pass.
