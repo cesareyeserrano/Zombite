@@ -3,6 +3,9 @@
 const MAX_LEVEL = 10;
 const BASE_MAGAZINE = 5;
 const BASE_HEALTH = 100;
+const SESSION_TARGET_MIN_MS = 3 * 60 * 1000;
+const SESSION_LIMIT_MS = 8 * 60 * 1000;
+const LEVEL_GOALS = [8, 9, 10, 11, 12, 13, 14, 15, 16, 18];
 const NIGHT_CITY_SCENE = {
   name: "Night Street",
   skyTop: "#05070b",
@@ -18,6 +21,7 @@ const ui = {
   sceneLabel: document.getElementById("sceneLabel"),
   goalLabel: document.getElementById("goalLabel"),
   statusLabel: document.getElementById("statusLabel"),
+  sessionLabel: document.getElementById("sessionLabel"),
   threatLabel: document.getElementById("threatLabel"),
   ammoLabel: document.getElementById("ammoLabel"),
   healthLabel: document.getElementById("healthLabel"),
@@ -55,6 +59,11 @@ const state = {
   waitingDecision: false,
   decisionMode: "none",
   savedLevel: 1,
+  session: {
+    elapsedMs: 0,
+    targetMinMs: SESSION_TARGET_MIN_MS,
+    limitMs: SESSION_LIMIT_MS,
+  },
   config: {
     language: "en",
     volume: 0.7,
@@ -80,7 +89,14 @@ const state = {
   },
 };
 
-const schemaKeys = new Set(["language", "volume", "startLevel", "difficulty"]);
+const schemaKeys = new Set([
+  "language",
+  "volume",
+  "startLevel",
+  "difficulty",
+  "difficultyInitial",
+  "dificultadInicial",
+]);
 const queryConfig = readQueryConfig();
 const allowedOrigins = buildAllowedOrigins(queryConfig.allowedOrigin);
 applyConfig(queryConfig);
@@ -166,6 +182,8 @@ function readQueryConfig() {
     volume: params.get("volume"),
     startLevel: params.get("startLevel"),
     difficulty: params.get("difficulty"),
+    difficultyInitial: params.get("difficultyInitial"),
+    dificultadInicial: params.get("dificultadInicial"),
     allowedOrigin: params.get("allowedOrigin"),
   };
 }
@@ -188,35 +206,47 @@ function hasKnownSchema(payload) {
 }
 
 function sanitizeConfig(next) {
+  const normalized = normalizeConfigInput(next);
   const sanitized = {};
 
-  if (typeof next.language === "string") {
-    const lang = next.language.trim().toLowerCase();
+  if (typeof normalized.language === "string") {
+    const lang = normalized.language.trim().toLowerCase();
     if (lang === "es" || lang === "en") sanitized.language = lang;
   }
 
-  if (next.volume !== undefined) {
-    const value = Number(next.volume);
+  if (normalized.volume !== undefined) {
+    const value = Number(normalized.volume);
     if (Number.isFinite(value)) {
       sanitized.volume = clamp(value, 0, 1);
     }
   }
 
-  if (next.startLevel !== undefined) {
-    const value = Number(next.startLevel);
+  if (normalized.startLevel !== undefined) {
+    const value = Number(normalized.startLevel);
     if (Number.isFinite(value)) {
       sanitized.startLevel = Math.round(clamp(value, 1, MAX_LEVEL));
     }
   }
 
-  if (typeof next.difficulty === "string") {
-    const mode = next.difficulty.trim().toLowerCase();
+  if (typeof normalized.difficulty === "string") {
+    const mode = normalized.difficulty.trim().toLowerCase();
     if (mode === "easy" || mode === "normal" || mode === "hard") {
       sanitized.difficulty = mode;
     }
   }
 
   return sanitized;
+}
+
+function normalizeConfigInput(raw) {
+  const next = raw && typeof raw === "object" ? { ...raw } : {};
+  if (next.difficulty === undefined && typeof next.difficultyInitial === "string") {
+    next.difficulty = next.difficultyInitial;
+  }
+  if (next.difficulty === undefined && typeof next.dificultadInicial === "string") {
+    next.difficulty = next.dificultadInicial;
+  }
+  return next;
 }
 
 function applyConfig(incoming) {
@@ -235,6 +265,7 @@ function startGame() {
   state.waitingDecision = false;
   state.decisionMode = "none";
   state.score = 0;
+  state.session.elapsedMs = 0;
   state.health = BASE_HEALTH;
   state.level = state.config.startLevel;
   state.savedLevel = state.level;
@@ -256,7 +287,7 @@ function startGame() {
 function beginLevel() {
   state.savedLevel = state.level;
   state.killsInLevel = 0;
-  state.goalInLevel = 7 + state.level * 2;
+  state.goalInLevel = goalForLevel(state.level);
   state.spawnsInLevel = 0;
   state.alphaSpawnedInLevel = false;
   state.zombies = [];
@@ -280,6 +311,12 @@ function loop(ts) {
 }
 
 function update(dt) {
+  state.session.elapsedMs += dt;
+  if (state.session.elapsedMs >= state.session.limitMs) {
+    triggerSessionTimeout();
+    return;
+  }
+
   state.nextSpawnMs -= dt;
   if (state.nextSpawnMs <= 0) {
     spawnZombie();
@@ -329,9 +366,9 @@ function spawnZombie() {
   const width = ui.canvas.width;
   const levelBias = state.level / MAX_LEVEL;
   const profile = currentProfile();
-  const alphaLevelGate = state.level >= 3 && state.level % 3 === 0;
-  const forceAlpha = alphaLevelGate && !state.alphaSpawnedInLevel && state.spawnsInLevel >= 2;
-  const alphaRoll = Math.random() < 0.14 + levelBias * 0.08;
+  const alphaLevelGate = state.level >= 4;
+  const forceAlpha = alphaLevelGate && !state.alphaSpawnedInLevel && state.spawnsInLevel >= Math.max(3, 9 - state.level);
+  const alphaRoll = Math.random() < 0.04 + levelBias * 0.16;
   const isAlpha = forceAlpha || (alphaLevelGate && alphaRoll);
 
   const z = {
@@ -361,8 +398,13 @@ function difficultyFactor() {
 }
 
 function spawnIntervalMs() {
-  const levelScale = 760 - state.level * 42;
+  const levelScale = 920 - state.level * 55;
   return clamp(levelScale / difficultyFactor(), 220, 850);
+}
+
+function goalForLevel(level) {
+  const idx = clamp(level, 1, MAX_LEVEL) - 1;
+  return LEVEL_GOALS[idx];
 }
 
 function shoot(point) {
@@ -461,6 +503,19 @@ function triggerGameOver(text) {
   refreshHud();
 }
 
+function triggerSessionTimeout() {
+  state.running = false;
+  state.gameOver = true;
+  showOutcome({
+    title: statusText("Session complete"),
+    text: statusText("The 8-minute run ended. Restart to play again."),
+    continueText: statusText("Play again"),
+    mode: "victory",
+  });
+  setStatus(statusText("Time is up"));
+  refreshHud();
+}
+
 function togglePause() {
   state.paused = !state.paused;
   ui.pauseBtn.textContent = state.paused ? "Resume" : "Pause";
@@ -473,9 +528,22 @@ function refreshHud() {
   ui.levelLabel.textContent = `Level ${state.level}/${MAX_LEVEL}`;
   ui.sceneLabel.textContent = `Scene ${scene.name}`;
   ui.goalLabel.textContent = `Goal ${state.killsInLevel}/${state.goalInLevel}`;
+  if (ui.sessionLabel) {
+    const remainingMs = Math.max(0, state.session.limitMs - state.session.elapsedMs);
+    ui.sessionLabel.textContent = `Time ${formatClock(remainingMs)}`;
+  }
   ui.threatLabel.textContent = `Threat ${profile.threat}`;
   ui.ammoLabel.textContent = state.reloading ? "Ammo reloading..." : `Ammo ${state.ammo}/${BASE_MAGAZINE}`;
   ui.healthLabel.textContent = `Health ${Math.max(0, Math.round(state.health))}`;
+}
+
+function formatClock(ms) {
+  const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
+  const min = Math.floor(totalSeconds / 60)
+    .toString()
+    .padStart(2, "0");
+  const sec = (totalSeconds % 60).toString().padStart(2, "0");
+  return `${min}:${sec}`;
 }
 
 function setStatus(text) {
@@ -511,6 +579,9 @@ function statusText(source) {
       "Fallback mode active": "Modo fallback activo",
       "Performance mode enabled": "Modo rendimiento activado",
       "Performance stable": "Rendimiento estable",
+      "Time is up": "Se acabo el tiempo",
+      "Session complete": "Sesion completada",
+      "The 8-minute run ended. Restart to play again.": "La partida de 8 minutos termino. Reinicia para jugar otra vez.",
     };
     return map[source] || source;
   }

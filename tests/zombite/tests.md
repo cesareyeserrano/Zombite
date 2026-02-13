@@ -6,39 +6,47 @@
 ## Functional
 
 ### TC-1
-- Title: <what is being validated>
-- Trace: US-?, FR-?, AC-?
+- Title: Inicio rapido de sesion jugable
+- Trace: US-1, FR-1, AC-1
 - Steps:
-  1) Given <context>
-  2) When <action>
-  3) Then <expected>
+  1) Given el juego cargado en navegador limpio
+  2) When el jugador pulsa iniciar
+  3) Then el gameplay comienza en pocos segundos con controles funcionales y HUD visible
+
+### TC-2
+- Title: Progresion de dificultad en 10 niveles
+- Trace: US-2, FR-2, AC-2
+- Steps:
+  1) Given una partida desde nivel 1
+  2) When el jugador avanza hasta niveles altos
+  3) Then la dificultad aumenta gradualmente sin salto abrupto imposible
 
 ## Negative / Abuse
 
-### TC-2
-- Title: <invalid input or abuse scenario>
-- Trace: US-?, FR-?
+### TC-3
+- Title: Configuracion de widget invalida
+- Trace: US-4, FR-4, AC-4
 - Steps:
-  1) Given <invalid context>
-  2) When <action>
-  3) Then <rejected with clear error>
+  1) Given un iframe con parametros malformados o fuera de contrato
+  2) When el juego procesa la configuracion
+  3) Then rechaza entradas invalidas, aplica defaults seguros y no rompe la sesion
 
 ## Security
 
-### TC-3
-- Title: <security control validation>
-- Trace: US-?, FR-?
+### TC-4
+- Title: Validacion de origin y esquema de mensajes
+- Trace: US-4, FR-4
 - Steps:
-  1) Given <threat scenario>
-  2) When <attempt>
-  3) Then <blocked/logged/limited>
+  1) Given un mensaje `postMessage` desde origen no permitido
+  2) When intenta modificar estado/configuracion del juego
+  3) Then la accion es bloqueada y no altera la partida
 
 ## Edge Cases
 
-### TC-4
-- Title: <edge case>
-- Trace: US-?, FR-?
+### TC-5
+- Title: Encuentro con zombie alfa en nivel avanzado
+- Trace: US-3, FR-3, AC-3
 - Steps:
-  1) Given <edge context>
-  2) When <action>
-  3) Then <expected>
+  1) Given un nivel configurado con evento alfa
+  2) When el jugador enfrenta y derrota al alfa
+  3) Then el progreso continua correctamente y no queda estado inconsistente

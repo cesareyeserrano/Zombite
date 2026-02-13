@@ -3,22 +3,7 @@
 STATUS: DRAFT
 
 ## 1. Problem Statement
-Derived from approved spec:
-
----
-
-# AF-SPEC: zombite
-
-STATUS: APPROVED
-## 1. Context
-Quiero construir un mini juego web instalable como iframe o widget en otras páginas.
-
-Primary actor: jugador casual
-Expected outcome: Que el jugador disfrute sesiones cortas de 3 a 8 minutos, complete niveles con dificultad progresiva y pueda incrustar el juego fácilmente en cualquier sitio mediante iframe/widget.
-
----
-
-(Assumptions and details will be refined during review.)
+El producto busca cubrir micro-sesiones de entretenimiento en web sin friccion de instalacion. Un jugador casual debe poder abrir y jugar rapido, mientras un sitio anfitrion debe incrustarlo como iframe/widget con configuracion controlada.
 
 ## 2. Actors
 - Jugador casual (actor primario): juega sesiones cortas y busca entretenimiento ligero.
@@ -46,7 +31,7 @@ Expected outcome: Que el jugador disfrute sesiones cortas de 3 a 8 minutos, comp
 - UX: controles simples, feedback audiovisual claro y curva de dificultad entendible.
 
 ## 7. Security Considerations
-- Validar origen (`origin`) y esquema de mensajes `postMessage` cuando se use como iframe/widget, y sanitizar cualquier dato de configuración recibido para evitar inyección o manipulación del estado del juego.
+- Validar origen (`origin`) y esquema de mensajes `postMessage` cuando se use como iframe/widget, y sanitizar cualquier dato de configuracion recibido para evitar inyeccion o manipulacion del estado del juego.
 
 ## 8. Out of Scope
 - Modo multijugador en tiempo real.
@@ -59,82 +44,44 @@ Expected outcome: Que el jugador disfrute sesiones cortas de 3 a 8 minutos, comp
 - AC-3: Given un nivel con zombie alfa, when el jugador lo enfrenta, then el alfa requiere mayor esfuerzo que un zombie normal y su derrota permite continuar.
 - AC-4: Given un sitio externo integra el juego via iframe/widget, when envia configuracion valida, then el juego aplica la configuracion y rechaza entradas invalidas sin romper la sesion.
 
+## 10. Discovery Interview Summary (Discovery Persona)
+- Usuarios principales: jugadores casuales web y equipos que necesitan un widget jugable reutilizable.
+- Jobs to be done: jugar rapidamente sin curva alta; incrustar el juego sin codigo complejo.
+- Dolor actual: minijuegos web suelen tardar en arrancar, carecen de progresion clara o no ofrecen integracion embebible segura.
+- Restricciones: rendimiento en laptops promedio, sesiones de 3-8 minutos, contrato de configuracion robusto.
+- Dependencias: pipeline de assets livianos, loop de render estable, canal `postMessage` validado.
+- Metricas de exito: tiempo a primer gameplay <5s, tasa de finalizacion de sesion corta, errores de embedding cercanos a cero.
+- Supuestos a validar: dificultad percibida como justa en 10 niveles y claridad de HUD en resoluciones pequenas.
 
----
-
-Refined problem framing:
-- What problem are we solving? TBD
-- Why now? TBD
-
-## 2. Discovery Interview Summary (Discovery Persona)
-- Primary users:
-- TBD
-
-- Jobs to be done:
-- TBD
-
-- Current pain:
-- TBD
-
-- Constraints (business/technical/compliance):
-- TBD
-
-- Dependencies:
-- TBD
-
-- Success metrics:
-- TBD
-
-- Assumptions:
-- TBD
-
-## 3. Scope
+## 11. Scope
 ### In scope
-- TBD
+- Loop jugable inmediato para sesiones cortas.
+- Diez niveles con progresion controlada.
+- Enemigos alfa en niveles definidos.
+- Embedding via iframe/widget con configuracion validada.
 
 ### Out of scope
-- Not specified
+- Multiplayer.
+- Economia y monetizacion.
+- Cuentas o ranking persistente global.
 
-## 4. Actors & User Journeys
-Actors:
-- TBD
+## 12. Actors & User Journeys
+- Jugador casual: abre juego, inicia partida, completa o falla nivel, decide continuar o reiniciar.
+- Sitio anfitrion: incrusta iframe, envia parametros validos, recibe comportamiento estable aun con inputs invalidos.
 
-Primary journey:
-- TBD
+## 13. Architecture Snapshot (Architect Persona)
+- Componentes: motor de juego en cliente, gestor de niveles, sistema de enemigos, adaptador de embedding y parser de configuracion.
+- Flujo: host envia configuracion inicial -> parser valida/sanitiza -> motor inicia nivel -> loop actualiza estado y HUD -> transicion a siguiente nivel o reinicio.
+- Decisiones clave: defaults seguros para configuracion, progresion parametrica por nivel, distincion explicita de zombie alfa.
+- Riesgos: picos de carga en niveles altos, inconsistencia de estado en derrota/victoria, abuso de mensajes externos.
 
-## 5. Architecture (Architect Persona)
-- Components:
--
-- Data flow:
--
-- Key decisions:
--
-- Risks:
--
+## 14. Security Snapshot (Security Persona)
+- Amenazas: `postMessage` malicioso, manipulacion de config, payloads inesperados.
+- Controles: allowlist de `origin`, esquema estricto de mensajes, sanitizacion y coercion de tipos.
+- Reglas de validacion: ignorar campos desconocidos, aplicar limites de rango, fallback a defaults ante error.
 
-## 6. Security (Security Persona)
-- Threats:
--
-- Controls required:
--
-- Validation rules:
--
-
-## 7. Backlog Outline
-Epic:
--
-
-User stories:
-1.
-2.
-3.
-
-## 8. Test Strategy
-- Smoke tests:
--
-- Functional tests:
--
-- Security tests:
--
-- Edge cases:
--
+## 15. Test Strategy Outline
+- Smoke: arranque, inicio de partida y primer nivel jugable.
+- Functional: progresion completa 1-10, eventos de zombie alfa, transiciones de nivel.
+- Security: rechazo de origen no permitido y de mensajes invalidos.
+- Edge: baja resolucion, cierre/reapertura de pestaña, degradacion por FPS bajo.

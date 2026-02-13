@@ -2,6 +2,12 @@
 
 Static web game that can run standalone or embedded as iframe/widget.
 
+## Gameplay pacing
+
+- Session timer: up to 8 minutes per run.
+- Level targets are tuned for short sessions (3-8 minutes depending on skill).
+- 10 levels with gradual difficulty and alpha zombie encounters from mid-game.
+
 ## Run locally
 
 From repository root:
@@ -20,6 +26,7 @@ Then open:
 1. Query params (`index.html?...`):
 - `language`: `en` or `es`
 - `difficulty`: `easy`, `normal`, `hard`
+- `difficultyInitial` / `dificultadInicial`: alias for initial difficulty
 - `startLevel`: `1..10`
 - `volume`: `0..1`
 - `allowedOrigin`: comma-separated allowlist for `postMessage` origins
