@@ -11,7 +11,11 @@
 - Validation: `aitri validate --feature zombite --format json` => `ok: true`, no gaps.
 - Static smoke tests: `node --test tests/web/zombite-smoke.test.mjs`.
 - Local static serving smoke (HTTP 200): `web/index.html`, `web/app.js`, `web/embed-example.html`.
+- Pacing simulation rounds (`node tests/web/pacing-sim.mjs`):
+  - `easy`: `04:14`
+  - `normal`: `05:46`
+  - `hard`: `08:03`
 
 ## Risks / follow-up
-- Live gameplay feel still requires manual playtest in a browser to verify actual completion times by skill band.
+- Live gameplay feel still requires manual playtest in a browser to confirm perceived fairness and aim pressure by skill band.
 - Recommend adding browser-driven integration tests (Playwright) in a future pass.

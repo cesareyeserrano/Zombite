@@ -5,7 +5,7 @@ const BASE_MAGAZINE = 5;
 const BASE_HEALTH = 100;
 const SESSION_TARGET_MIN_MS = 3 * 60 * 1000;
 const SESSION_LIMIT_MS = 8 * 60 * 1000;
-const LEVEL_GOALS = [8, 9, 10, 11, 12, 13, 14, 15, 16, 18];
+const LEVEL_GOALS = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
 const NIGHT_CITY_SCENE = {
   name: "Night Street",
   skyTop: "#05070b",

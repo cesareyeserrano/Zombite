@@ -32,7 +32,7 @@ test('session pacing controls exist in runtime', () => {
 });
 
 test('level progression tuning and alpha escalation are present', () => {
-  assert.match(appJs, /const LEVEL_GOALS\s*=\s*\[8, 9, 10, 11, 12, 13, 14, 15, 16, 18\]/);
+  assert.match(appJs, /const LEVEL_GOALS\s*=\s*\[6, 7, 8, 9, 10, 11, 12, 13, 14, 15\]/);
   assert.match(appJs, /goalForLevel\(state\.level\)/);
   assert.match(appJs, /alphaLevelGate\s*=\s*state\.level\s*>?=\s*4/);
 });
