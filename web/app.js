@@ -3,30 +3,14 @@
 const MAX_LEVEL = 10;
 const BASE_MAGAZINE = 5;
 const BASE_HEALTH = 100;
-const LEVEL_SCENES = [
-  { name: "City", skyTop: "#4f86b2", skyMid: "#31597a", groundTop: "#33463a", groundBottom: "#2f382f" },
-  { name: "Factory", skyTop: "#5f6f7e", skyMid: "#3a4754", groundTop: "#4b3f38", groundBottom: "#2e2622" },
-  { name: "Countryside", skyTop: "#7fb8e6", skyMid: "#4f8f66", groundTop: "#4f6b3e", groundBottom: "#2f4727" },
-  { name: "Highway", skyTop: "#6f7a95", skyMid: "#3f4e69", groundTop: "#4b4b53", groundBottom: "#2f3037" },
-  { name: "Harbor", skyTop: "#6093b5", skyMid: "#3a6075", groundTop: "#385260", groundBottom: "#243844" },
-  { name: "Subway", skyTop: "#50596c", skyMid: "#30384a", groundTop: "#4d4441", groundBottom: "#2d2726" },
-  { name: "Mall", skyTop: "#7b8ca3", skyMid: "#4b5c78", groundTop: "#5a4a52", groundBottom: "#352b31" },
-  { name: "Hospital", skyTop: "#7ea0b0", skyMid: "#4f6f80", groundTop: "#52636b", groundBottom: "#324149" },
-  { name: "Airport", skyTop: "#7ea7c6", skyMid: "#4f7793", groundTop: "#5f6a72", groundBottom: "#39434a" },
-  { name: "Bunker", skyTop: "#5e6571", skyMid: "#3d4450", groundTop: "#4c4f57", groundBottom: "#2b2e35" },
-];
-const SCENE_PROFILE = {
-  City: { zombieColor: "#a6e277", alphaColor: "#ff7a5f", speedBoost: 0, hpBoost: 0, sizeBoost: 0, wobbleBoost: 0, damageBoost: 0, threat: "Low" },
-  Factory: { zombieColor: "#b7d88f", alphaColor: "#ff8c5a", speedBoost: 0.08, hpBoost: 0, sizeBoost: 1, wobbleBoost: 2, damageBoost: 1, threat: "Guarded" },
-  Countryside: { zombieColor: "#9fd26a", alphaColor: "#f97058", speedBoost: 0.12, hpBoost: 0, sizeBoost: 0, wobbleBoost: 4, damageBoost: 0, threat: "Medium" },
-  Highway: { zombieColor: "#b0d4d4", alphaColor: "#ff9273", speedBoost: 0.16, hpBoost: 1, sizeBoost: 1, wobbleBoost: 3, damageBoost: 1, threat: "Medium+" },
-  Harbor: { zombieColor: "#8fc3c8", alphaColor: "#ff8f66", speedBoost: 0.2, hpBoost: 1, sizeBoost: 1, wobbleBoost: 5, damageBoost: 1, threat: "High" },
-  Subway: { zombieColor: "#c2c9a4", alphaColor: "#ff9a6e", speedBoost: 0.24, hpBoost: 1, sizeBoost: 2, wobbleBoost: 2, damageBoost: 2, threat: "High" },
-  Mall: { zombieColor: "#c7c4a7", alphaColor: "#ff9e74", speedBoost: 0.28, hpBoost: 1, sizeBoost: 2, wobbleBoost: 3, damageBoost: 2, threat: "Very High" },
-  Hospital: { zombieColor: "#b6d2c7", alphaColor: "#ffae87", speedBoost: 0.32, hpBoost: 2, sizeBoost: 2, wobbleBoost: 4, damageBoost: 2, threat: "Very High" },
-  Airport: { zombieColor: "#bdd4e3", alphaColor: "#ffb38d", speedBoost: 0.36, hpBoost: 2, sizeBoost: 2, wobbleBoost: 3, damageBoost: 3, threat: "Extreme" },
-  Bunker: { zombieColor: "#c5c9d0", alphaColor: "#ffc299", speedBoost: 0.4, hpBoost: 3, sizeBoost: 3, wobbleBoost: 2, damageBoost: 3, threat: "Apocalypse" },
+const NIGHT_CITY_SCENE = {
+  name: "Night Street",
+  skyTop: "#05070b",
+  skyMid: "#111824",
+  groundTop: "#1a1d23",
+  groundBottom: "#0c0e12",
 };
+const THREAT_SCALE = ["Low", "Guarded", "Elevated", "High", "Critical", "Lethal"];
 
 const ui = {
   canvas: document.getElementById("arena"),
@@ -37,6 +21,7 @@ const ui = {
   threatLabel: document.getElementById("threatLabel"),
   ammoLabel: document.getElementById("ammoLabel"),
   healthLabel: document.getElementById("healthLabel"),
+  crosshair: document.getElementById("crosshair"),
   startBtn: document.getElementById("startBtn"),
   reloadBtn: document.getElementById("reloadBtn"),
   pauseBtn: document.getElementById("pauseBtn"),
@@ -65,6 +50,7 @@ const state = {
   nextSpawnMs: 0,
   zombies: [],
   pointer: { x: ui.canvas.width / 2, y: ui.canvas.height / 2 },
+  pointerVisible: false,
   lastTs: 0,
   waitingDecision: false,
   decisionMode: "none",
@@ -81,6 +67,16 @@ const state = {
     sampleFrames: 0,
     lowScore: 0,
     highScore: 0,
+  },
+  impacts: [],
+  bloodPools: [],
+  camera: {
+    shakeMs: 0,
+    intensity: 0,
+  },
+  audio: {
+    ctx: null,
+    unlocked: false,
   },
 };
 
@@ -123,6 +119,18 @@ ui.canvas.addEventListener("pointermove", (event) => {
   const point = canvasPoint(event);
   state.pointer.x = point.x;
   state.pointer.y = point.y;
+  moveCrosshair(event);
+});
+
+ui.canvas.addEventListener("pointerenter", (event) => {
+  state.pointerVisible = true;
+  ui.crosshair.classList.add("active");
+  moveCrosshair(event);
+});
+
+ui.canvas.addEventListener("pointerleave", () => {
+  state.pointerVisible = false;
+  ui.crosshair.classList.remove("active");
 });
 
 ui.canvas.addEventListener("click", (event) => {
@@ -232,6 +240,10 @@ function startGame() {
   state.savedLevel = state.level;
   ui.pauseBtn.textContent = "Pause";
   state.zombies = [];
+  state.impacts = [];
+  state.bloodPools = [];
+  state.camera.shakeMs = 0;
+  state.camera.intensity = 0;
   state.ammo = BASE_MAGAZINE;
   state.reloading = false;
   hideOutcome();
@@ -285,12 +297,29 @@ function update(dt) {
     z.x += Math.sin((performance.now() + z.phase) * 0.001 * z.wobbleSpeed) * z.wobble;
 
     if (z.y > arenaHeight - 78) {
-      state.health -= z.isAlpha ? damageRate * 1.8 : damageRate;
+      applyPlayerDamage(z.isAlpha ? damageRate * 1.8 : damageRate);
       state.zombies.splice(i, 1);
       if (state.health <= 0) {
         triggerGameOver("You were overrun");
         return;
       }
+    }
+  }
+
+  for (let i = state.impacts.length - 1; i >= 0; i -= 1) {
+    state.impacts[i].ttl -= dt;
+    if (state.impacts[i].ttl <= 0) state.impacts.splice(i, 1);
+  }
+
+  for (let i = state.bloodPools.length - 1; i >= 0; i -= 1) {
+    state.bloodPools[i].ttl -= dt;
+    if (state.bloodPools[i].ttl <= 0) state.bloodPools.splice(i, 1);
+  }
+
+  if (state.camera.shakeMs > 0) {
+    state.camera.shakeMs = Math.max(0, state.camera.shakeMs - dt);
+    if (state.camera.shakeMs === 0) {
+      state.camera.intensity = 0;
     }
   }
   refreshHud();
@@ -308,7 +337,7 @@ function spawnZombie() {
   const z = {
     isAlpha,
     x: 80 + Math.random() * (width - 160),
-    y: -50,
+    y: 120 + Math.random() * 40,
     radius: (isAlpha ? 36 : 24) + profile.sizeBoost,
     hp: (isAlpha ? 3 + Math.floor(state.level / 3) : 1 + Math.floor(state.level / 4)) + profile.hpBoost,
     speed: (1.1 + levelBias * 1.2 + profile.speedBoost) * difficultyFactor(),
@@ -337,12 +366,15 @@ function spawnIntervalMs() {
 }
 
 function shoot(point) {
+  ensureAudioReady();
   if (state.reloading || state.ammo <= 0) {
     if (state.ammo <= 0) queueReload();
     return;
   }
   state.ammo -= 1;
   flashMuzzle();
+  startCameraShake(65, 2.4);
+  playShotSound();
   let hit = false;
 
   for (let i = state.zombies.length - 1; i >= 0; i -= 1) {
@@ -353,7 +385,11 @@ function shoot(point) {
     if (Math.hypot(dx, dy) <= z.radius + precisionWindow) {
       z.hp -= 1;
       hit = true;
+      addImpact(point.x, point.y, z.isAlpha ? "#ffbdb0" : "#b7ffbf");
+      playHitSound(z.isAlpha);
       if (z.hp <= 0) {
+        addBloodPool(z.x, z.y, z.isAlpha);
+        playKillSound(z.isAlpha);
         state.zombies.splice(i, 1);
         state.killsInLevel += 1;
         state.score += z.isAlpha ? 55 : 10;
@@ -483,64 +519,153 @@ function statusText(source) {
 
 function drawIntro() {
   drawSkyGround();
-  ctx.fillStyle = "rgba(20, 29, 37, 0.62)";
+  ctx.fillStyle = "rgba(12, 8, 8, 0.7)";
   ctx.fillRect(0, 0, ui.canvas.width, ui.canvas.height);
-  ctx.fillStyle = "#f4fbff";
-  ctx.font = "700 40px Trebuchet MS";
+  ctx.fillStyle = "#ffe0e0";
+  ctx.font = "700 48px Oswald";
   ctx.textAlign = "center";
   ctx.fillText("ZOMBITE", ui.canvas.width / 2, 180);
-  ctx.font = "600 22px Trebuchet MS";
-  ctx.fillStyle = "#cae6f8";
-  ctx.fillText("Short anti-stress zombie sniper sessions", ui.canvas.width / 2, 220);
+  ctx.font = "700 20px Oswald";
+  ctx.fillStyle = "#ff9e9e";
+  ctx.fillText("SURVIVE THE HORDE", ui.canvas.width / 2, 220);
 }
 
 function draw() {
+  const shake = currentShakeOffset();
+  ctx.save();
+  ctx.translate(shake.x, shake.y);
   drawSkyGround();
+  drawBloodPools();
   for (const z of state.zombies) {
     drawZombie(z);
   }
+  drawImpacts();
   drawWeaponFrame();
+  ctx.restore();
 }
 
 function drawSkyGround() {
   const scene = currentScene();
   const gradient = ctx.createLinearGradient(0, 0, 0, ui.canvas.height);
-  gradient.addColorStop(0, scene.skyTop);
-  gradient.addColorStop(0.52, scene.skyMid);
-  gradient.addColorStop(0.53, scene.groundTop);
-  gradient.addColorStop(1, scene.groundBottom);
+  gradient.addColorStop(0, shadeColor(scene.skyTop, -82));
+  gradient.addColorStop(0.46, shadeColor(scene.skyMid, -64));
+  gradient.addColorStop(0.47, shadeColor(scene.groundTop, -52));
+  gradient.addColorStop(1, shadeColor(scene.groundBottom, -46));
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, ui.canvas.width, ui.canvas.height);
+  drawBackFog();
+  drawGroundPlane();
   if (state.perf.quality === "high") {
     drawSceneDetails(scene.name);
   } else {
     drawSceneLabel(`${scene.name} (Performance)`);
   }
+  drawFilmNoise();
+  drawVignette();
 }
 
 function drawZombie(z) {
+  const horizonY = ui.canvas.height * 0.25;
+  const depth = clamp((z.y - horizonY) / (ui.canvas.height - horizonY), 0, 1);
+  const scale = 0.48 + depth * 1.05;
+  const bodyHeight = ((z.isAlpha ? 148 : 128) + z.radius * 0.45) * scale;
+  const shoulder = (z.isAlpha ? 30 : 24) * scale;
+  const armLength = (z.isAlpha ? 34 : 29) * scale;
+  const legLength = (z.isAlpha ? 46 : 42) * scale;
+  const headRadius = (z.isAlpha ? 14 : 12) * scale;
+  const swing = Math.sin((performance.now() + z.phase) * 0.008) * 6.5 * scale;
+  const torsoTop = -bodyHeight * 0.68;
+  const hipY = -bodyHeight * 0.12;
+
+  if (depth <= 0.02) return;
+
   ctx.save();
   ctx.translate(z.x, z.y);
-  ctx.fillStyle = z.color || (z.isAlpha ? "#ff7a5f" : "#a6e277");
+  ctx.globalAlpha = 0.8 + depth * 0.2;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.strokeStyle = "rgba(16, 9, 9, 0.95)";
+  ctx.lineWidth = 8 * scale;
   ctx.beginPath();
-  ctx.arc(0, 0, z.radius, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = "#22191a";
-  ctx.beginPath();
-  ctx.arc(-z.radius * 0.35, -z.radius * 0.2, z.radius * 0.17, 0, Math.PI * 2);
-  ctx.arc(z.radius * 0.35, -z.radius * 0.2, z.radius * 0.17, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = "#281616";
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.moveTo(-z.radius * 0.35, z.radius * 0.3);
-  ctx.quadraticCurveTo(0, z.radius * 0.6, z.radius * 0.35, z.radius * 0.3);
+  ctx.moveTo(-shoulder + swing, torsoTop + armLength * 0.36);
+  ctx.lineTo(-shoulder * 1.5 + swing, torsoTop + armLength);
+  ctx.moveTo(shoulder - swing, torsoTop + armLength * 0.36);
+  ctx.lineTo(shoulder * 1.5 - swing, torsoTop + armLength);
   ctx.stroke();
+
+  ctx.strokeStyle = z.isAlpha ? "#d9c7ad" : "#b7c6ae";
+  ctx.lineWidth = 4.4 * scale;
+  ctx.beginPath();
+  ctx.moveTo(-shoulder + swing, torsoTop + armLength * 0.36);
+  ctx.lineTo(-shoulder * 1.4 + swing, torsoTop + armLength);
+  ctx.moveTo(shoulder - swing, torsoTop + armLength * 0.36);
+  ctx.lineTo(shoulder * 1.4 - swing, torsoTop + armLength);
+  ctx.stroke();
+
+  ctx.strokeStyle = "rgba(12, 8, 8, 0.95)";
+  ctx.lineWidth = 8.4 * scale;
+  ctx.beginPath();
+  ctx.moveTo(-shoulder * 0.2, hipY);
+  ctx.lineTo(-shoulder * 0.45 + swing * 0.35, hipY + legLength);
+  ctx.moveTo(shoulder * 0.2, hipY);
+  ctx.lineTo(shoulder * 0.45 - swing * 0.35, hipY + legLength);
+  ctx.stroke();
+
+  ctx.strokeStyle = z.isAlpha ? "#68574d" : "#5f685f";
+  ctx.lineWidth = 4.8 * scale;
+  ctx.beginPath();
+  ctx.moveTo(-shoulder * 0.2, hipY);
+  ctx.lineTo(-shoulder * 0.45 + swing * 0.35, hipY + legLength);
+  ctx.moveTo(shoulder * 0.2, hipY);
+  ctx.lineTo(shoulder * 0.45 - swing * 0.35, hipY + legLength);
+  ctx.stroke();
+
+  ctx.fillStyle = z.isAlpha ? "#4f3732" : "#364133";
+  ctx.beginPath();
+  ctx.moveTo(-shoulder * 1.1, torsoTop + shoulder * 0.2);
+  ctx.lineTo(shoulder * 1.1, torsoTop + shoulder * 0.2);
+  ctx.lineTo(shoulder * 0.72, hipY);
+  ctx.lineTo(-shoulder * 0.72, hipY);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "rgba(12, 8, 8, 0.95)";
+  ctx.lineWidth = 2 * scale;
+  ctx.stroke();
+
+  ctx.fillStyle = z.isAlpha ? "#766159" : "#68775e";
+  ctx.beginPath();
+  ctx.arc(0, torsoTop - headRadius * 0.4, headRadius, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "rgba(10, 7, 7, 0.95)";
+  ctx.lineWidth = 2 * scale;
+  ctx.stroke();
+
+  ctx.fillStyle = "#120909";
+  ctx.beginPath();
+  ctx.arc(-headRadius * 0.4, torsoTop - headRadius * 0.48, headRadius * 0.18, 0, Math.PI * 2);
+  ctx.arc(headRadius * 0.4, torsoTop - headRadius * 0.48, headRadius * 0.18, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = z.isAlpha ? "#ff624f" : "#c4e89f";
+  ctx.lineWidth = Math.max(1.2, 2.2 * scale);
+  ctx.beginPath();
+  ctx.moveTo(-headRadius * 0.46, torsoTop - headRadius * 0.2);
+  ctx.lineTo(-headRadius * 0.2, torsoTop - headRadius * 0.14);
+  ctx.moveTo(headRadius * 0.46, torsoTop - headRadius * 0.2);
+  ctx.lineTo(headRadius * 0.2, torsoTop - headRadius * 0.14);
+  ctx.stroke();
+  ctx.strokeStyle = z.isAlpha ? "#e75744" : "#b6db93";
+  ctx.lineWidth = Math.max(1.2, 1.8 * scale);
+  ctx.beginPath();
+  ctx.moveTo(-headRadius * 0.52, torsoTop + headRadius * 0.22);
+  ctx.quadraticCurveTo(0, torsoTop + headRadius * 0.48, headRadius * 0.52, torsoTop + headRadius * 0.22);
+  ctx.stroke();
+
   if (z.isAlpha) {
-    ctx.strokeStyle = "#fff2c4";
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = "rgba(255, 102, 80, 0.88)";
+    ctx.lineWidth = 2.8 * scale;
     ctx.beginPath();
-    ctx.arc(0, 0, z.radius + 4, 0, Math.PI * 2);
+    ctx.ellipse(0, hipY * 0.2, shoulder * 1.8, bodyHeight * 0.62, 0, 0, Math.PI * 2);
     ctx.stroke();
   }
   ctx.restore();
@@ -550,16 +675,24 @@ function drawWeaponFrame() {
   if (state.perf.quality === "low") return;
   const h = ui.canvas.height;
   const w = ui.canvas.width;
-  ctx.fillStyle = "rgba(8, 12, 17, 0.74)";
+  ctx.fillStyle = "rgba(8, 11, 15, 0.88)";
   ctx.beginPath();
   ctx.moveTo(0, h);
-  ctx.lineTo(w * 0.33, h);
-  ctx.lineTo(w * 0.49, h * 0.8);
-  ctx.lineTo(w * 0.62, h * 0.8);
-  ctx.lineTo(w * 0.75, h);
+  ctx.lineTo(w * 0.3, h);
+  ctx.lineTo(w * 0.45, h * 0.82);
+  ctx.lineTo(w * 0.62, h * 0.82);
+  ctx.lineTo(w * 0.77, h);
   ctx.lineTo(w, h);
   ctx.closePath();
   ctx.fill();
+
+  ctx.strokeStyle = "rgba(183, 204, 225, 0.22)";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(w * 0.33, h * 0.92);
+  ctx.lineTo(w * 0.5, h * 0.78);
+  ctx.lineTo(w * 0.68, h * 0.92);
+  ctx.stroke();
 }
 
 function currentScene() {
@@ -781,8 +914,8 @@ function drawBunkerEntrance() {
 }
 
 function drawSceneLabel(sceneName) {
-  ctx.fillStyle = "rgba(245, 251, 255, 0.75)";
-  ctx.font = "600 20px Trebuchet MS";
+  ctx.fillStyle = "rgba(255, 207, 207, 0.8)";
+  ctx.font = "700 20px Oswald";
   ctx.textAlign = "left";
   ctx.fillText(sceneName, 20, 36);
 }
@@ -795,6 +928,14 @@ function canvasPoint(event) {
   };
 }
 
+function moveCrosshair(event) {
+  const rect = ui.canvas.getBoundingClientRect();
+  const x = event.clientX - rect.left;
+  const y = event.clientY - rect.top;
+  ui.crosshair.style.left = `${x}px`;
+  ui.crosshair.style.top = `${y}px`;
+}
+
 function flashMuzzle() {
   ui.muzzleFlash.classList.remove("active");
   void ui.muzzleFlash.offsetWidth;
@@ -803,6 +944,258 @@ function flashMuzzle() {
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
+}
+
+function addImpact(x, y, tone) {
+  state.impacts.push({
+    x,
+    y,
+    color: tone,
+    ttl: 140,
+  });
+  if (state.impacts.length > 24) state.impacts.shift();
+}
+
+function addBloodPool(x, y, isAlpha) {
+  state.bloodPools.push({
+    x,
+    y: y + (isAlpha ? 8 : 5),
+    radius: isAlpha ? 36 : 24,
+    ttl: isAlpha ? 7000 : 5200,
+    tone: isAlpha ? "rgba(130, 12, 12, 0.55)" : "rgba(120, 10, 10, 0.5)",
+  });
+  if (state.bloodPools.length > 36) state.bloodPools.shift();
+}
+
+function drawBloodPools() {
+  for (const pool of state.bloodPools) {
+    const life = clamp(pool.ttl / 7000, 0, 1);
+    const fade = life < 0.28 ? life / 0.28 : 1;
+    const spread = pool.radius * (1.45 - life * 0.4);
+    ctx.save();
+    ctx.globalAlpha = fade;
+    ctx.fillStyle = pool.tone;
+    ctx.beginPath();
+    ctx.ellipse(pool.x, pool.y + 4, spread, spread * 0.42, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "rgba(30, 3, 3, 0.22)";
+    ctx.beginPath();
+    ctx.ellipse(pool.x + spread * 0.12, pool.y + 5, spread * 0.45, spread * 0.2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+function applyPlayerDamage(amount) {
+  state.health -= amount;
+  startCameraShake(170, 5.8);
+  playDamageSound();
+}
+
+function startCameraShake(durationMs, intensity) {
+  state.camera.shakeMs = Math.max(state.camera.shakeMs, durationMs);
+  state.camera.intensity = Math.max(state.camera.intensity, intensity);
+}
+
+function currentShakeOffset() {
+  if (state.camera.shakeMs <= 0) return { x: 0, y: 0 };
+  const phase = state.camera.shakeMs / 180;
+  const strength = state.camera.intensity * Math.max(0.1, phase);
+  return {
+    x: (Math.random() * 2 - 1) * strength,
+    y: (Math.random() * 2 - 1) * strength,
+  };
+}
+
+function drawImpacts() {
+  for (const hit of state.impacts) {
+    const life = clamp(hit.ttl / 140, 0, 1);
+    const radius = 4 + (1 - life) * 22;
+    ctx.save();
+    ctx.globalAlpha = life * 0.8;
+    ctx.strokeStyle = hit.color;
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.moveTo(hit.x - radius, hit.y);
+    ctx.lineTo(hit.x + radius, hit.y);
+    ctx.moveTo(hit.x, hit.y - radius);
+    ctx.lineTo(hit.x, hit.y + radius);
+    ctx.moveTo(hit.x - radius * 0.7, hit.y - radius * 0.7);
+    ctx.lineTo(hit.x + radius * 0.7, hit.y + radius * 0.7);
+    ctx.moveTo(hit.x - radius * 0.7, hit.y + radius * 0.7);
+    ctx.lineTo(hit.x + radius * 0.7, hit.y - radius * 0.7);
+    ctx.stroke();
+    ctx.fillStyle = "rgba(255, 73, 73, 0.35)";
+    ctx.beginPath();
+    ctx.arc(hit.x, hit.y, Math.max(1.4, radius * 0.12), 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+function drawGroundPlane() {
+  const horizon = ui.canvas.height * 0.52;
+  const maxY = ui.canvas.height;
+  ctx.save();
+  ctx.strokeStyle = "rgba(255, 176, 176, 0.08)";
+  ctx.lineWidth = 1;
+  for (let y = horizon + 26; y < maxY; y += 26) {
+    const bend = (y - horizon) * 0.08;
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.quadraticCurveTo(ui.canvas.width * 0.5, y + bend, ui.canvas.width, y);
+    ctx.stroke();
+  }
+  for (let x = 0; x <= ui.canvas.width; x += 90) {
+    ctx.beginPath();
+    ctx.moveTo(x, maxY);
+    ctx.lineTo(ui.canvas.width * 0.5 + (x - ui.canvas.width * 0.5) * 0.1, horizon);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawBackFog() {
+  const fog = ctx.createLinearGradient(0, ui.canvas.height * 0.2, 0, ui.canvas.height * 0.75);
+  fog.addColorStop(0, "rgba(112, 31, 31, 0.08)");
+  fog.addColorStop(0.55, "rgba(27, 18, 18, 0.22)");
+  fog.addColorStop(1, "rgba(9, 6, 6, 0.42)");
+  ctx.fillStyle = fog;
+  ctx.fillRect(0, 0, ui.canvas.width, ui.canvas.height);
+}
+
+function drawFilmNoise() {
+  if (state.perf.quality === "low") return;
+  ctx.save();
+  ctx.globalAlpha = 0.08;
+  for (let i = 0; i < 70; i += 1) {
+    const x = Math.random() * ui.canvas.width;
+    const y = Math.random() * ui.canvas.height;
+    const w = 1 + Math.random() * 2;
+    const h = 1 + Math.random() * 2;
+    const shade = 180 + Math.floor(Math.random() * 75);
+    ctx.fillStyle = `rgb(${shade}, ${shade}, ${shade})`;
+    ctx.fillRect(x, y, w, h);
+  }
+  ctx.restore();
+}
+
+function ensureAudioReady() {
+  if (state.audio.ctx && state.audio.ctx.state !== "closed") {
+    if (state.audio.ctx.state === "suspended") {
+      state.audio.ctx.resume().catch(() => undefined);
+    }
+    return;
+  }
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  if (!AudioCtx) return;
+  state.audio.ctx = new AudioCtx();
+  state.audio.unlocked = true;
+}
+
+function audioGainValue(multiplier) {
+  return clamp(state.config.volume * multiplier, 0, 1);
+}
+
+function playTone({ frequency, type, gain, durationMs, slideTo, q }) {
+  const audioCtx = state.audio.ctx;
+  if (!audioCtx) return;
+  const now = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const amp = audioCtx.createGain();
+  const filter = audioCtx.createBiquadFilter();
+  filter.type = "lowpass";
+  filter.frequency.value = frequency * 1.8;
+  filter.Q.value = q || 0.8;
+
+  osc.type = type;
+  osc.frequency.setValueAtTime(frequency, now);
+  if (slideTo) {
+    osc.frequency.exponentialRampToValueAtTime(Math.max(40, slideTo), now + durationMs / 1000);
+  }
+
+  amp.gain.setValueAtTime(Math.max(0.0001, gain), now);
+  amp.gain.exponentialRampToValueAtTime(0.0001, now + durationMs / 1000);
+
+  osc.connect(filter);
+  filter.connect(amp);
+  amp.connect(audioCtx.destination);
+  osc.start(now);
+  osc.stop(now + durationMs / 1000);
+}
+
+function playShotSound() {
+  if (!state.audio.ctx) return;
+  playTone({
+    frequency: 170,
+    type: "sawtooth",
+    gain: audioGainValue(0.09),
+    durationMs: 85,
+    slideTo: 70,
+    q: 2.8,
+  });
+}
+
+function playHitSound(isAlpha) {
+  if (!state.audio.ctx) return;
+  playTone({
+    frequency: isAlpha ? 122 : 146,
+    type: "square",
+    gain: audioGainValue(isAlpha ? 0.055 : 0.04),
+    durationMs: isAlpha ? 92 : 70,
+    slideTo: isAlpha ? 90 : 105,
+    q: 1.2,
+  });
+}
+
+function playKillSound(isAlpha) {
+  if (!state.audio.ctx) return;
+  playTone({
+    frequency: isAlpha ? 92 : 108,
+    type: "triangle",
+    gain: audioGainValue(isAlpha ? 0.08 : 0.06),
+    durationMs: isAlpha ? 190 : 140,
+    slideTo: isAlpha ? 58 : 66,
+    q: 0.9,
+  });
+}
+
+function playDamageSound() {
+  ensureAudioReady();
+  if (!state.audio.ctx) return;
+  playTone({
+    frequency: 72,
+    type: "square",
+    gain: audioGainValue(0.07),
+    durationMs: 130,
+    slideTo: 55,
+    q: 1.6,
+  });
+}
+
+function drawVignette() {
+  const vignette = ctx.createRadialGradient(
+    ui.canvas.width * 0.5,
+    ui.canvas.height * 0.56,
+    ui.canvas.height * 0.15,
+    ui.canvas.width * 0.5,
+    ui.canvas.height * 0.56,
+    ui.canvas.height * 0.86,
+  );
+  vignette.addColorStop(0, "rgba(0, 0, 0, 0)");
+  vignette.addColorStop(1, "rgba(6, 3, 3, 0.72)");
+  ctx.fillStyle = vignette;
+  ctx.fillRect(0, 0, ui.canvas.width, ui.canvas.height);
+}
+
+function shadeColor(hex, amount) {
+  const parsed = /^#?([a-f\\d]{2})([a-f\\d]{2})([a-f\\d]{2})$/i.exec(hex);
+  if (!parsed) return hex;
+  const clampColor = (n) => clamp(n + amount, 0, 255);
+  const r = clampColor(parseInt(parsed[1], 16));
+  const g = clampColor(parseInt(parsed[2], 16));
+  const b = clampColor(parseInt(parsed[3], 16));
+  return `rgb(${r}, ${g}, ${b})`;
 }
 
 function isValidUrlOrigin(text) {

@@ -26,7 +26,10 @@
 
       <section class="arena-wrap">
         <canvas id="arena" width="1280" height="720" aria-label="Game arena"></canvas>
-        <div id="crosshair" class="crosshair" aria-hidden="true"></div>
+        <div id="crosshair" class="crosshair" aria-hidden="true">
+          <span class="ring-x"></span>
+          <span class="ring-y"></span>
+        </div>
         <div id="muzzleFlash" class="muzzle-flash" aria-hidden="true"></div>
         <div id="outcomePanel" class="outcome-panel hidden" role="dialog" aria-live="polite">
           <h2 id="outcomeTitle">Level Complete</h2>
