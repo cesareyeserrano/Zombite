@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Zombite</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="game-shell">
+      <header class="hud">
+        <div class="hud-left">
+          <span id="levelLabel">Level 1/10</span>
+          <span id="sceneLabel">Scene City</span>
+          <span id="goalLabel">Goal 0/0</span>
+        </div>
+        <div class="hud-center">
+          <span id="statusLabel">Press Start</span>
+        </div>
+        <div class="hud-right">
+          <span id="threatLabel">Threat Low</span>
+          <span id="ammoLabel">Ammo 5/5</span>
+          <span id="healthLabel">Health 100</span>
+        </div>
+      </header>
+
+      <section class="arena-wrap">
+        <canvas id="arena" width="1280" height="720" aria-label="Game arena"></canvas>
+        <div id="crosshair" class="crosshair" aria-hidden="true"></div>
+        <div id="muzzleFlash" class="muzzle-flash" aria-hidden="true"></div>
+        <div id="outcomePanel" class="outcome-panel hidden" role="dialog" aria-live="polite">
+          <h2 id="outcomeTitle">Level Complete</h2>
+          <p id="outcomeText">Choose what to do next.</p>
+          <div class="outcome-actions">
+            <button id="continueBtn" type="button">Continue</button>
+            <button id="restartBtn" type="button">Restart Run</button>
+          </div>
+        </div>
+      </section>
+
+      <footer class="controls">
+        <button id="startBtn" type="button">Start Game</button>
+        <button id="reloadBtn" type="button">Reload</button>
+        <button id="pauseBtn" type="button">Pause</button>
+        <span class="hint">Click zombies to shoot. Press R to reload.</span>
+      </footer>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+  </html>
