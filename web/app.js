@@ -14,6 +14,9 @@ const NIGHT_CITY_SCENE = {
   groundBottom: "#0c0e12",
 };
 const THREAT_SCALE = ["Low", "Guarded", "Elevated", "High", "Critical", "Lethal"];
+const INVALID_MESSAGE_WINDOW_MS = 1500;
+const INVALID_MESSAGE_LIMIT = 8;
+const INVALID_MESSAGE_COOLDOWN_MS = 4000;
 
 const ui = {
   canvas: document.getElementById("arena"),
@@ -87,6 +90,14 @@ const state = {
     ctx: null,
     unlocked: false,
   },
+  embed: {
+    acceptedMessages: 0,
+    rejectedMessages: 0,
+    rejectedByReason: {},
+    invalidWindow: [],
+    blockedUntilMs: 0,
+    lastLogMs: 0,
+  },
 };
 
 const schemaKeys = new Set([
@@ -155,24 +166,42 @@ ui.canvas.addEventListener("click", (event) => {
 });
 
 window.addEventListener("keydown", (event) => {
-  if (event.key.toLowerCase() === "r") {
+  const key = event.key.toLowerCase();
+  if (key === "r") {
     queueReload();
     return;
   }
-  if (event.key.toLowerCase() === "p" && state.running && !state.gameOver) {
+  if (key === "p" && state.running && !state.gameOver) {
+    togglePause();
+    return;
+  }
+  if ((key === " " || key === "spacebar") && state.running && !state.gameOver) {
+    event.preventDefault();
+    shootFromKeyboard();
+    return;
+  }
+  if (key === "enter") {
+    event.preventDefault();
+    if (state.waitingDecision) {
+      continueRun();
+      return;
+    }
+    if (!state.running || state.gameOver) {
+      startGame();
+      return;
+    }
+    if (state.paused) {
+      togglePause();
+    }
+    return;
+  }
+  if (key === "escape" && state.running && !state.gameOver) {
     togglePause();
   }
 });
 
 window.addEventListener("message", (event) => {
-  if (!allowedOrigins.has(event.origin)) return;
-  const message = event.data;
-  if (!message || typeof message !== "object") return;
-  if (message.type !== "zombite.configure") return;
-  if (!message.payload || typeof message.payload !== "object") return;
-  if (!hasKnownSchema(message.payload)) return;
-  applyConfig(message.payload);
-  setStatus(statusText("Config updated"));
+  handleEmbedMessage(event);
 });
 
 function readQueryConfig() {
@@ -203,6 +232,85 @@ function hasKnownSchema(payload) {
   const keys = Object.keys(payload);
   if (keys.length === 0) return false;
   return keys.every((key) => schemaKeys.has(key));
+}
+
+function handleEmbedMessage(event) {
+  const now = performance.now();
+  if (isEmbedBurstBlocked(now)) {
+    recordEmbedReject("burst_blocked", event, now);
+    return;
+  }
+
+  if (!allowedOrigins.has(event.origin)) {
+    recordEmbedReject("origin_blocked", event, now);
+    return;
+  }
+
+  const message = event.data;
+  if (!message || typeof message !== "object") {
+    recordEmbedReject("invalid_envelope", event, now);
+    return;
+  }
+
+  const messageType = typeof message.type === "string" ? message.type : "";
+  if (!messageType.startsWith("zombite.")) return;
+  if (messageType !== "zombite.configure") {
+    recordEmbedReject("unsupported_type", event, now);
+    return;
+  }
+
+  if (!message.payload || typeof message.payload !== "object") {
+    recordEmbedReject("invalid_payload", event, now);
+    return;
+  }
+  if (!hasKnownSchema(message.payload)) {
+    recordEmbedReject("unknown_schema", event, now);
+    return;
+  }
+
+  state.embed.acceptedMessages += 1;
+  applyConfig(message.payload);
+  setStatus(statusText("Config updated"));
+  logEmbedMessage("accepted", "config_updated", event.origin, now);
+}
+
+function pruneEmbedInvalidWindow(now) {
+  const cutoff = now - INVALID_MESSAGE_WINDOW_MS;
+  state.embed.invalidWindow = state.embed.invalidWindow.filter((entry) => entry >= cutoff);
+}
+
+function isEmbedBurstBlocked(now) {
+  pruneEmbedInvalidWindow(now);
+  return now < state.embed.blockedUntilMs;
+}
+
+function recordEmbedReject(reason, event, now = performance.now()) {
+  state.embed.rejectedMessages += 1;
+  state.embed.rejectedByReason[reason] = (state.embed.rejectedByReason[reason] || 0) + 1;
+
+  if (reason !== "burst_blocked") {
+    state.embed.invalidWindow.push(now);
+    pruneEmbedInvalidWindow(now);
+    if (state.embed.invalidWindow.length >= INVALID_MESSAGE_LIMIT) {
+      state.embed.blockedUntilMs = now + INVALID_MESSAGE_COOLDOWN_MS;
+      state.embed.rejectedMessages += 1;
+      state.embed.rejectedByReason.burst_guard_armed = (state.embed.rejectedByReason.burst_guard_armed || 0) + 1;
+      logEmbedMessage("rejected", "burst_guard_armed", event.origin, now);
+    }
+  }
+
+  logEmbedMessage("rejected", reason, event.origin, now);
+}
+
+function logEmbedMessage(outcome, reason, origin, now = performance.now()) {
+  if (outcome === "rejected" && now - state.embed.lastLogMs < 220) return;
+  state.embed.lastLogMs = now;
+  const logger = outcome === "accepted" ? console.info : console.warn;
+  logger(`[Zombite][embed] ${outcome}:${reason}`, {
+    origin,
+    accepted: state.embed.acceptedMessages,
+    rejected: state.embed.rejectedMessages,
+  });
 }
 
 function sanitizeConfig(next) {
@@ -449,6 +557,14 @@ function shoot(point) {
 
   if (state.ammo <= 0) queueReload();
   refreshHud();
+}
+
+function shootFromKeyboard() {
+  if (!state.running || state.paused || state.gameOver || state.waitingDecision) return;
+  const point = state.pointerVisible
+    ? { x: state.pointer.x, y: state.pointer.y }
+    : { x: ui.canvas.width / 2, y: ui.canvas.height / 2 };
+  shoot(point);
 }
 
 function queueReload() {

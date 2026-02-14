@@ -24,6 +24,25 @@ test('app accepts widget config aliases and schema keys', () => {
   assert.match(appJs, /next\.difficulty\s*=\s*next\.dificultadInicial/);
 });
 
+test('app hardens embed messaging with burst guard telemetry', () => {
+  assert.match(appJs, /INVALID_MESSAGE_WINDOW_MS/);
+  assert.match(appJs, /INVALID_MESSAGE_LIMIT/);
+  assert.match(appJs, /INVALID_MESSAGE_COOLDOWN_MS/);
+  assert.match(appJs, /recordEmbedReject\("origin_blocked"/);
+  assert.match(appJs, /recordEmbedReject\("unknown_schema"/);
+  assert.match(appJs, /"burst_blocked"/);
+  assert.match(appJs, /\[Zombite\]\[embed\] \${outcome}:\${reason}/);
+});
+
+test('keyboard controls cover primary actions', () => {
+  assert.match(appJs, /if \(\(key === " " \|\| key === "spacebar"\) && state\.running && !state\.gameOver\)/);
+  assert.match(appJs, /if \(key === "enter"\)/);
+  assert.match(appJs, /if \(key === "escape" && state\.running && !state\.gameOver\)/);
+  assert.match(appJs, /function shootFromKeyboard\(\)/);
+  assert.match(indexHtml, /Space to shoot/);
+  assert.match(indexHtml, /Enter starts\/continues/);
+});
+
 test('session pacing controls exist in runtime', () => {
   assert.match(appJs, /SESSION_LIMIT_MS\s*=\s*8\s*\*\s*60\s*\*\s*1000/);
   assert.match(appJs, /state\.session\.elapsedMs\s*\+=\s*dt/);
