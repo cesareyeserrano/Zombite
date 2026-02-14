@@ -12,6 +12,22 @@ test('index wires game script and session HUD label', () => {
   assert.match(indexHtml, /<script src="\.\/app\.js"><\/script>/);
 });
 
+test('core loop exposes quick start HUD and clear continue/restart outcomes', () => {
+  assert.match(indexHtml, /id="levelLabel">Level 1\/10</);
+  assert.match(indexHtml, /id="statusLabel">Press Start</);
+  assert.match(indexHtml, /id="startBtn" type="button">Start Game</);
+  assert.match(indexHtml, /id="continueBtn" type="button">Continue</);
+  assert.match(indexHtml, /id="restartBtn" type="button">Restart Run</);
+
+  assert.match(appJs, /setStatus\(statusText\("Hunt started"\)\)/);
+  assert.match(appJs, /title: statusText\("Level complete"\)/);
+  assert.match(appJs, /text: statusText\("You can continue to the next level or restart\."\)/);
+  assert.match(appJs, /continueText: statusText\("Continue"\)/);
+  assert.match(appJs, /title: statusText\("Level failed"\)/);
+  assert.match(appJs, /text: statusText\("You can retry this level or restart the run\."\)/);
+  assert.match(appJs, /continueText: statusText\("Retry level"\)/);
+});
+
 test('embed demo uses spanish initial difficulty alias', () => {
   assert.match(embedHtml, /dificultadInicial=normal/);
   assert.match(embedHtml, /type:\s*"zombite\.configure"/);
