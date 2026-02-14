@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { estimateLevelMs, estimateRunMs } from './pacing-sim.mjs';
 
 const indexHtml = readFileSync(new URL('../../web/index.html', import.meta.url), 'utf8');
 const embedHtml = readFileSync(new URL('../../web/embed-example.html', import.meta.url), 'utf8');
@@ -77,6 +78,30 @@ test('level progression tuning and alpha escalation are present', () => {
   assert.match(appJs, /alphaLevelGate\s*=\s*levelHasAlpha\(state\.level\)/);
   assert.match(appJs, /function levelHasAlpha\(level\)/);
   assert.match(appJs, /Threat \$\{profile\.threat\}\$\{alphaSuffix\}/);
+});
+
+test('pacing model keeps progression gradual and level 10 reachable for medium skill', () => {
+  const easyMs = estimateRunMs('easy');
+  const normalMs = estimateRunMs('normal');
+  const hardMs = estimateRunMs('hard');
+
+  assert.ok(easyMs >= 3 * 60 * 1000, `easy run too short: ${easyMs}`);
+  assert.ok(hardMs <= 8 * 60 * 1000, `hard run exceeds session limit: ${hardMs}`);
+  assert.ok(easyMs < normalMs && normalMs < hardMs, 'difficulty pacing is not monotonic');
+
+  const levelTimes = [];
+  for (let level = 1; level <= 10; level += 1) {
+    levelTimes.push(estimateLevelMs(level, 'normal'));
+  }
+  for (let i = 1; i < levelTimes.length; i += 1) {
+    const prev = levelTimes[i - 1];
+    const current = levelTimes[i];
+    assert.ok(current <= prev * 2.7, `abrupt spike at level ${i + 1}: ${prev} -> ${current}`);
+  }
+
+  const level10Ms = estimateLevelMs(10, 'normal');
+  assert.ok(level10Ms >= 45 * 1000, `level 10 too easy for medium skill: ${level10Ms}`);
+  assert.ok(level10Ms <= 95 * 1000, `level 10 not reachable for medium skill: ${level10Ms}`);
 });
 
 test('scene and profile tables are defined for runtime HUD and visuals', () => {
