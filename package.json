@@ -1,0 +1,5 @@
+{
+  "scripts": {
+    "test:aitri": "node --test tests/web/zombite-smoke.test.mjs"
+  }
+}

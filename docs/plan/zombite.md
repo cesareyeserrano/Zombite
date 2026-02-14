@@ -77,10 +77,15 @@ Host -> `EmbedAdapter` -> `ConfigValidator` -> `GameEngine` -> `LevelManager`/`E
 - Riesgo: inyeccion via mensajes externos.
   Mitigacion: allowlist de origen y validacion estricta de esquema.
 
-### Observability
+### Observability (logs/metrics/tracing)
 - Logs de arranque y validacion de config.
 - Metricas de FPS promedio y caidas por nivel.
 - Conteo de rechazos de mensajes externos por motivo.
+- Estado: resuelto para MVP.
+- Implementacion actual:
+  - `console.info`/`console.warn` en canal embed para `accepted` y `rejected` con motivo.
+  - Muestreo de FPS con degradacion/recuperacion de calidad en runtime.
+  - HUD con etiquetas de nivel/amenaza/tiempo para inspeccion visual de progresion.
 
 ## 6. Security (Security Persona)
 ### Threats

@@ -6,6 +6,7 @@ const BASE_HEALTH = 100;
 const SESSION_TARGET_MIN_MS = 3 * 60 * 1000;
 const SESSION_LIMIT_MS = 8 * 60 * 1000;
 const LEVEL_GOALS = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
+const ALPHA_LEVELS = new Set([4, 6, 8, 10]);
 const NIGHT_CITY_SCENE = {
   name: "Night Street",
   skyTop: "#05070b",
@@ -14,6 +15,122 @@ const NIGHT_CITY_SCENE = {
   groundBottom: "#0c0e12",
 };
 const THREAT_SCALE = ["Low", "Guarded", "Elevated", "High", "Critical", "Lethal"];
+const LEVEL_PACE = [1.0, 1.04, 1.08, 1.13, 1.18, 1.23, 1.28, 1.34, 1.4, 1.47];
+const LEVEL_HP_SCALE = [1.0, 1.0, 1.01, 1.03, 1.05, 1.07, 1.1, 1.13, 1.16, 1.2];
+const LEVEL_SCENES = [
+  NIGHT_CITY_SCENE,
+  { name: "City", skyTop: "#0f1525", skyMid: "#1d2b3f", groundTop: "#1c1e26", groundBottom: "#121319" },
+  { name: "Factory", skyTop: "#121018", skyMid: "#2b2320", groundTop: "#2a2624", groundBottom: "#1a1614" },
+  { name: "Countryside", skyTop: "#0e1d26", skyMid: "#234238", groundTop: "#213429", groundBottom: "#131f19" },
+  { name: "Highway", skyTop: "#10131c", skyMid: "#263247", groundTop: "#2e323a", groundBottom: "#1e2229" },
+  { name: "Harbor", skyTop: "#0d1b2b", skyMid: "#24495f", groundTop: "#244150", groundBottom: "#162736" },
+  { name: "Subway", skyTop: "#14141d", skyMid: "#2a2a34", groundTop: "#24242e", groundBottom: "#171720" },
+  { name: "Mall", skyTop: "#1b1522", skyMid: "#3b2f43", groundTop: "#2f2a35", groundBottom: "#1d1921" },
+  { name: "Hospital", skyTop: "#131d24", skyMid: "#2f4550", groundTop: "#2b3b44", groundBottom: "#1a252c" },
+  { name: "Airport", skyTop: "#101a26", skyMid: "#2f3f4f", groundTop: "#2a333c", groundBottom: "#1a2028" },
+];
+const SCENE_PROFILE = {
+  "Night Street": {
+    threat: THREAT_SCALE[0],
+    speedBoost: 0.04,
+    hpBoost: 0,
+    sizeBoost: -1,
+    wobbleBoost: 0,
+    damageBoost: 0,
+    zombieColor: "#6d8b66",
+    alphaColor: "#a57860",
+  },
+  City: {
+    threat: THREAT_SCALE[0],
+    speedBoost: 0.05,
+    hpBoost: 0,
+    sizeBoost: 0,
+    wobbleBoost: 1,
+    damageBoost: 0,
+    zombieColor: "#7f916a",
+    alphaColor: "#ba7c6a",
+  },
+  Factory: {
+    threat: THREAT_SCALE[1],
+    speedBoost: 0.08,
+    hpBoost: 1,
+    sizeBoost: 1,
+    wobbleBoost: 2,
+    damageBoost: 0.6,
+    zombieColor: "#839474",
+    alphaColor: "#c98f70",
+  },
+  Countryside: {
+    threat: THREAT_SCALE[1],
+    speedBoost: 0.11,
+    hpBoost: 1,
+    sizeBoost: 1,
+    wobbleBoost: 1,
+    damageBoost: 0.8,
+    zombieColor: "#7a9363",
+    alphaColor: "#bb7d58",
+  },
+  Highway: {
+    threat: THREAT_SCALE[2],
+    speedBoost: 0.14,
+    hpBoost: 1,
+    sizeBoost: 2,
+    wobbleBoost: 2,
+    damageBoost: 1.2,
+    zombieColor: "#8b8f7e",
+    alphaColor: "#cb8766",
+  },
+  Harbor: {
+    threat: THREAT_SCALE[3],
+    speedBoost: 0.18,
+    hpBoost: 1,
+    sizeBoost: 2,
+    wobbleBoost: 2,
+    damageBoost: 1.6,
+    zombieColor: "#7e9488",
+    alphaColor: "#ca815f",
+  },
+  Subway: {
+    threat: THREAT_SCALE[3],
+    speedBoost: 0.22,
+    hpBoost: 2,
+    sizeBoost: 2,
+    wobbleBoost: 3,
+    damageBoost: 2.0,
+    zombieColor: "#8a948f",
+    alphaColor: "#d38f72",
+  },
+  Mall: {
+    threat: THREAT_SCALE[4],
+    speedBoost: 0.26,
+    hpBoost: 2,
+    sizeBoost: 3,
+    wobbleBoost: 3,
+    damageBoost: 2.5,
+    zombieColor: "#919684",
+    alphaColor: "#d89875",
+  },
+  Hospital: {
+    threat: THREAT_SCALE[4],
+    speedBoost: 0.31,
+    hpBoost: 2,
+    sizeBoost: 3,
+    wobbleBoost: 4,
+    damageBoost: 3.0,
+    zombieColor: "#8a9d8c",
+    alphaColor: "#da9a79",
+  },
+  Airport: {
+    threat: THREAT_SCALE[5],
+    speedBoost: 0.37,
+    hpBoost: 3,
+    sizeBoost: 4,
+    wobbleBoost: 4,
+    damageBoost: 3.6,
+    zombieColor: "#98a08f",
+    alphaColor: "#e1a784",
+  },
+};
 const INVALID_MESSAGE_WINDOW_MS = 1500;
 const INVALID_MESSAGE_LIMIT = 8;
 const INVALID_MESSAGE_COOLDOWN_MS = 4000;
@@ -474,18 +591,22 @@ function spawnZombie() {
   const width = ui.canvas.width;
   const levelBias = state.level / MAX_LEVEL;
   const profile = currentProfile();
-  const alphaLevelGate = state.level >= 4;
-  const forceAlpha = alphaLevelGate && !state.alphaSpawnedInLevel && state.spawnsInLevel >= Math.max(3, 9 - state.level);
-  const alphaRoll = Math.random() < 0.04 + levelBias * 0.16;
+  const pace = levelPace(state.level);
+  const hpScale = levelHpScale(state.level);
+  const alphaLevelGate = levelHasAlpha(state.level);
+  const forceAlpha = alphaLevelGate && !state.alphaSpawnedInLevel && state.spawnsInLevel >= alphaSpawnAtSpawnCount(state.level);
+  const alphaRoll = alphaLevelGate && Math.random() < 0.03 + levelBias * 0.11;
   const isAlpha = forceAlpha || (alphaLevelGate && alphaRoll);
+  const baseHp = isAlpha ? 3 + Math.floor(state.level / 3) : 1 + Math.floor(state.level / 4);
+  const scaledHp = Math.max(1, Math.round(baseHp * hpScale));
 
   const z = {
     isAlpha,
     x: 80 + Math.random() * (width - 160),
     y: 120 + Math.random() * 40,
     radius: (isAlpha ? 36 : 24) + profile.sizeBoost,
-    hp: (isAlpha ? 3 + Math.floor(state.level / 3) : 1 + Math.floor(state.level / 4)) + profile.hpBoost,
-    speed: (1.1 + levelBias * 1.2 + profile.speedBoost) * difficultyFactor(),
+    hp: scaledHp + profile.hpBoost,
+    speed: (1.0 + levelBias * 0.95 + profile.speedBoost) * difficultyFactor() * pace,
     wobble: (isAlpha ? 24 : 14) + profile.wobbleBoost,
     wobbleSpeed: isAlpha ? 1.6 : 1.0,
     phase: Math.random() * 1000,
@@ -506,13 +627,34 @@ function difficultyFactor() {
 }
 
 function spawnIntervalMs() {
-  const levelScale = 920 - state.level * 55;
-  return clamp(levelScale / difficultyFactor(), 220, 850);
+  const levelScale = 920 - state.level * 46;
+  const pacedScale = levelScale / levelPace(state.level);
+  return clamp(pacedScale / difficultyFactor(), 220, 850);
 }
 
 function goalForLevel(level) {
   const idx = clamp(level, 1, MAX_LEVEL) - 1;
   return LEVEL_GOALS[idx];
+}
+
+function levelHasAlpha(level) {
+  const normalized = Math.round(clamp(level, 1, MAX_LEVEL));
+  return ALPHA_LEVELS.has(normalized);
+}
+
+function alphaSpawnAtSpawnCount(level) {
+  const normalized = Math.round(clamp(level, 1, MAX_LEVEL));
+  return clamp(7 - Math.floor(normalized / 2), 2, 5);
+}
+
+function levelPace(level) {
+  const normalized = Math.round(clamp(level, 1, MAX_LEVEL));
+  return LEVEL_PACE[normalized - 1];
+}
+
+function levelHpScale(level) {
+  const normalized = Math.round(clamp(level, 1, MAX_LEVEL));
+  return LEVEL_HP_SCALE[normalized - 1];
 }
 
 function shoot(point) {
@@ -648,7 +790,8 @@ function refreshHud() {
     const remainingMs = Math.max(0, state.session.limitMs - state.session.elapsedMs);
     ui.sessionLabel.textContent = `Time ${formatClock(remainingMs)}`;
   }
-  ui.threatLabel.textContent = `Threat ${profile.threat}`;
+  const alphaSuffix = levelHasAlpha(state.level) ? " +Alpha" : "";
+  ui.threatLabel.textContent = `Threat ${profile.threat}${alphaSuffix}`;
   ui.ammoLabel.textContent = state.reloading ? "Ammo reloading..." : `Ammo ${state.ammo}/${BASE_MAGAZINE}`;
   ui.healthLabel.textContent = `Health ${Math.max(0, Math.round(state.health))}`;
 }

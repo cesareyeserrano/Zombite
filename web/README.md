@@ -6,7 +6,8 @@ Static web game that can run standalone or embedded as iframe/widget.
 
 - Session timer: up to 8 minutes per run.
 - Level targets are tuned for short sessions (3-8 minutes depending on skill).
-- 10 levels with gradual difficulty and alpha zombie encounters from mid-game.
+- Progression curve uses per-level pace/HP tuning to avoid abrupt difficulty spikes.
+- 10 levels with gradual difficulty and alpha zombie encounters on defined levels: 4, 6, 8, and 10.
 
 ## Run locally
 

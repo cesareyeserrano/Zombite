@@ -5,6 +5,15 @@ STATUS: DRAFT
 ## 1. Problem Statement
 El producto busca cubrir micro-sesiones de entretenimiento en web sin friccion de instalacion. Un jugador casual debe poder abrir y jugar rapido, mientras un sitio anfitrion debe incrustarlo como iframe/widget con configuracion controlada.
 
+## 2. Discovery Interview Summary (Discovery Persona)
+- Usuarios principales: jugadores casuales web y equipos que necesitan un widget jugable reutilizable.
+- Jobs to be done: jugar rapidamente sin curva alta; incrustar el juego sin codigo complejo.
+- Dolor actual: minijuegos web suelen tardar en arrancar, carecen de progresion clara o no ofrecen integracion embebible segura.
+- Restricciones: rendimiento en laptops promedio, sesiones de 3-8 minutos, contrato de configuracion robusto.
+- Dependencias: pipeline de assets livianos, loop de render estable, canal `postMessage` validado.
+- Metricas de exito: tiempo a primer gameplay <5s, tasa de finalizacion de sesion corta, errores de embedding cercanos a cero.
+- Supuestos a validar: dificultad percibida como justa en 10 niveles y claridad de HUD en resoluciones pequenas.
+
 ## 2. Actors
 - Jugador casual (actor primario): juega sesiones cortas y busca entretenimiento ligero.
 - Sitio anfitrion: integra el juego como iframe/widget y envia configuracion controlada.
@@ -38,13 +47,19 @@ El producto busca cubrir micro-sesiones de entretenimiento en web sin friccion d
 - Economia in-game, tienda o microtransacciones.
 - Registro de usuarios o ranking global persistente.
 
+## 9. Discovery Confidence
+- Nivel de confianza actual: medio-alto.
+- Evidencia fuerte: contrato funcional FR-1..FR-4 y validaciones de seguridad/embedding implementadas.
+- Riesgo residual: calibracion fina de dificultad percibida en nivel 9-10 para jugadores de habilidad media.
+- Plan de cierre: ejecutar playtests manuales guiados y ajustar tabla de pacing por nivel.
+
 ## 9. Acceptance Criteria (Given/When/Then)
 - AC-1: Given un jugador casual, when inicia una partida, then entra en gameplay en pocos segundos y puede jugar una sesion corta completa.
 - AC-2: Given una partida en progreso, when avanza del nivel 1 al 10, then la dificultad aumenta gradualmente y se percibe retadora pero razonable.
 - AC-3: Given un nivel con zombie alfa, when el jugador lo enfrenta, then el alfa requiere mayor esfuerzo que un zombie normal y su derrota permite continuar.
 - AC-4: Given un sitio externo integra el juego via iframe/widget, when envia configuracion valida, then el juego aplica la configuracion y rechaza entradas invalidas sin romper la sesion.
 
-## 10. Discovery Interview Summary (Discovery Persona)
+## 10. Research Notes
 - Usuarios principales: jugadores casuales web y equipos que necesitan un widget jugable reutilizable.
 - Jobs to be done: jugar rapidamente sin curva alta; incrustar el juego sin codigo complejo.
 - Dolor actual: minijuegos web suelen tardar en arrancar, carecen de progresion clara o no ofrecen integracion embebible segura.

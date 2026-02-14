@@ -52,8 +52,22 @@ test('session pacing controls exist in runtime', () => {
 
 test('level progression tuning and alpha escalation are present', () => {
   assert.match(appJs, /const LEVEL_GOALS\s*=\s*\[6, 7, 8, 9, 10, 11, 12, 13, 14, 15\]/);
+  assert.match(appJs, /const ALPHA_LEVELS\s*=\s*new Set\(\[4, 6, 8, 10\]\)/);
+  assert.match(appJs, /const LEVEL_PACE\s*=\s*\[[^\]]+\]/);
+  assert.match(appJs, /const LEVEL_HP_SCALE\s*=\s*\[[^\]]+\]/);
+  assert.match(appJs, /function levelPace\(level\)/);
+  assert.match(appJs, /function levelHpScale\(level\)/);
   assert.match(appJs, /goalForLevel\(state\.level\)/);
-  assert.match(appJs, /alphaLevelGate\s*=\s*state\.level\s*>?=\s*4/);
+  assert.match(appJs, /alphaLevelGate\s*=\s*levelHasAlpha\(state\.level\)/);
+  assert.match(appJs, /function levelHasAlpha\(level\)/);
+  assert.match(appJs, /Threat \$\{profile\.threat\}\$\{alphaSuffix\}/);
+});
+
+test('scene and profile tables are defined for runtime HUD and visuals', () => {
+  assert.match(appJs, /const LEVEL_SCENES\s*=\s*\[/);
+  assert.match(appJs, /const SCENE_PROFILE\s*=\s*\{/);
+  assert.match(appJs, /return LEVEL_SCENES\[idx\]/);
+  assert.match(appJs, /return SCENE_PROFILE\[scene\.name\] \|\| SCENE_PROFILE\.City/);
 });
 
 test('README documents difficulty aliases', () => {

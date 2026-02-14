@@ -8,9 +8,29 @@ const LEVEL_GOALS = levelGoalsMatch[1]
   .split(',')
   .map((x) => Number(x.trim()))
   .filter(Number.isFinite);
+const levelPaceMatch = app.match(/const LEVEL_PACE = \[([^\]]+)\]/);
+if (!levelPaceMatch) throw new Error('LEVEL_PACE not found');
+const LEVEL_PACE = levelPaceMatch[1]
+  .split(',')
+  .map((x) => Number(x.trim()))
+  .filter(Number.isFinite);
+const levelHpScaleMatch = app.match(/const LEVEL_HP_SCALE = \[([^\]]+)\]/);
+if (!levelHpScaleMatch) throw new Error('LEVEL_HP_SCALE not found');
+const LEVEL_HP_SCALE = levelHpScaleMatch[1]
+  .split(',')
+  .map((x) => Number(x.trim()))
+  .filter(Number.isFinite);
+const alphaLevelsMatch = app.match(/const ALPHA_LEVELS = new Set\(\[([^\]]+)\]\)/);
+if (!alphaLevelsMatch) throw new Error('ALPHA_LEVELS not found');
+const ALPHA_LEVELS = new Set(
+  alphaLevelsMatch[1]
+    .split(',')
+    .map((x) => Number(x.trim()))
+    .filter(Number.isFinite),
+);
 
 const SPAWN_BASE = 920;
-const SPAWN_DECAY = 55;
+const SPAWN_DECAY = 46;
 const SPAWN_MIN = 220;
 const SPAWN_MAX = 850;
 const MAG_SIZE = 5;
@@ -30,13 +50,15 @@ function clamp(n, min, max) {
 
 function spawnIntervalMs(level, diffFactor) {
   const levelScale = SPAWN_BASE - level * SPAWN_DECAY;
-  return clamp(levelScale / diffFactor, SPAWN_MIN, SPAWN_MAX);
+  const pace = LEVEL_PACE[level - 1];
+  return clamp(levelScale / pace / diffFactor, SPAWN_MIN, SPAWN_MAX);
 }
 
 function avgHpPerKill(level) {
-  const normalHp = 1 + Math.floor(level / 4);
-  const alphaHp = 3 + Math.floor(level / 3);
-  const alphaChance = level >= 4 ? 0.04 + (level / 10) * 0.16 : 0;
+  const hpScale = LEVEL_HP_SCALE[level - 1];
+  const normalHp = Math.round((1 + Math.floor(level / 4)) * hpScale);
+  const alphaHp = Math.round((3 + Math.floor(level / 3)) * hpScale);
+  const alphaChance = ALPHA_LEVELS.has(level) ? 0.03 + (level / 10) * 0.11 : 0;
   return normalHp * (1 - alphaChance) + alphaHp * alphaChance;
 }
 
