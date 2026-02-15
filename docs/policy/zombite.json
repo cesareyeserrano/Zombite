@@ -1,14 +1,18 @@
 {
   "ok": true,
   "feature": "zombite",
-  "evaluatedAt": "2026-02-15T21:47:39.891Z",
+  "evaluatedAt": "2026-02-15T21:59:52.918Z",
   "policy": {
     "allowDependencyChanges": false,
     "blockedImports": [],
     "blockedPaths": []
   },
   "files": {
-    "changed": [],
+    "changed": [
+      "backlog/zombite/backlog.md",
+      "docs/verification/zombite.json",
+      "tests/zombite/tests.md"
+    ],
     "dependencyChanged": []
   },
   "gaps": {
