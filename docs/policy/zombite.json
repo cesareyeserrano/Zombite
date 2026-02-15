@@ -1,7 +1,7 @@
 {
   "ok": true,
   "feature": "zombite",
-  "evaluatedAt": "2026-02-15T21:59:52.918Z",
+  "evaluatedAt": "2026-02-15T22:02:48.314Z",
   "policy": {
     "allowDependencyChanges": false,
     "blockedImports": [],
@@ -9,9 +9,7 @@
   },
   "files": {
     "changed": [
-      "backlog/zombite/backlog.md",
-      "docs/verification/zombite.json",
-      "tests/zombite/tests.md"
+      "docs/policy/zombite.json"
     ],
     "dependencyChanged": []
   },
