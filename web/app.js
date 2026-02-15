@@ -224,6 +224,10 @@ const state = {
     intensity: 0,
     pulse: 0,
   },
+  hitStop: {
+    ttl: 0,
+    intensity: 0,
+  },
   audio: {
     ctx: null,
     unlocked: false,
@@ -595,6 +599,8 @@ function startGame() {
   state.damageFx.ttl = 0;
   state.damageFx.intensity = 0;
   state.damageFx.pulse = 0;
+  state.hitStop.ttl = 0;
+  state.hitStop.intensity = 0;
   state.ammo = BASE_MAGAZINE;
   state.reloading = false;
   state.weapon.recoil = 0;
@@ -648,7 +654,17 @@ function update(dt) {
     return;
   }
 
-  state.nextSpawnMs -= dt;
+  let worldScale = 1;
+  if (state.hitStop.ttl > 0) {
+    state.hitStop.ttl = Math.max(0, state.hitStop.ttl - dt);
+    worldScale = 1 - 0.84 * state.hitStop.intensity;
+    if (state.hitStop.ttl === 0) {
+      state.hitStop.intensity = 0;
+    }
+  }
+  const worldDt = dt * worldScale;
+
+  state.nextSpawnMs -= worldDt;
   if (state.nextSpawnMs <= 0) {
     spawnZombie();
     state.nextSpawnMs = spawnIntervalMs();
@@ -661,9 +677,9 @@ function update(dt) {
 
   for (let i = state.zombies.length - 1; i >= 0; i -= 1) {
     const z = state.zombies[i];
-    const step = dt / 16.6;
+    const step = worldDt / 16.6;
     const staggerFactor = z.staggerMs > 0 ? 0.34 : 1;
-    z.staggerMs = Math.max(0, z.staggerMs - dt);
+    z.staggerMs = Math.max(0, z.staggerMs - worldDt);
     z.y += z.speed * step * staggerFactor;
     z.x += Math.sin((performance.now() + z.phase) * 0.001 * z.wobbleSpeed) * z.wobble;
     if (z.knockbackX || z.knockbackY) {
@@ -822,6 +838,7 @@ function shoot(point) {
   startCameraShake(65, 2.4);
   playShotSound();
   let hit = false;
+  let hitStopStrength = 0;
 
   for (let i = state.zombies.length - 1; i >= 0; i -= 1) {
     const z = state.zombies[i];
@@ -832,10 +849,12 @@ function shoot(point) {
       z.hp -= 1;
       applyZombieImpactReaction(z, point);
       hit = true;
+      hitStopStrength = Math.max(hitStopStrength, z.isAlpha ? 0.56 : 0.42);
       triggerHitMarker(z.isAlpha ? "alpha" : "normal");
       addImpact(point.x, point.y, z.isAlpha ? "#ffbdb0" : "#b7ffbf");
       playHitSound(z.isAlpha);
       if (z.hp <= 0) {
+        hitStopStrength = Math.max(hitStopStrength, z.isAlpha ? 1 : 0.78);
         triggerHitMarker(z.isAlpha ? "alpha_kill" : "kill");
         addBloodPool(z.x, z.y, z.isAlpha);
         playKillSound(z.isAlpha);
@@ -852,6 +871,9 @@ function shoot(point) {
 
   if (!hit) {
     state.score = Math.max(0, state.score - 1);
+  }
+  if (hitStopStrength > 0) {
+    triggerHitStop(hitStopStrength);
   }
 
   if (state.ammo <= 0) queueReload();
@@ -1715,6 +1737,12 @@ function triggerDamageOverlay(amount) {
   state.damageFx.ttl = Math.max(state.damageFx.ttl, 380 + normalized * 240);
   state.damageFx.intensity = Math.max(state.damageFx.intensity, 0.35 + normalized * 0.65);
   state.damageFx.pulse = 0;
+}
+
+function triggerHitStop(strength = 0.5) {
+  const power = clamp(strength, 0.2, 1);
+  state.hitStop.ttl = Math.max(state.hitStop.ttl, 24 + power * 46);
+  state.hitStop.intensity = Math.max(state.hitStop.intensity, power);
 }
 
 function applyPlayerDamage(amount) {

@@ -78,6 +78,7 @@ test('runtime includes recoil and hit-marker feedback for shooter feel', () => {
   assert.match(appJs, /hitMarker:\s*\{\s*ttl:\s*0,\s*tone:\s*"normal"/);
   assert.match(appJs, /weapon:\s*\{\s*recoil:\s*0,\s*swayX:\s*0,\s*swayY:\s*0,\s*swayTargetX:\s*0,\s*swayTargetY:\s*0,\s*shotLightTtl:\s*0/);
   assert.match(appJs, /damageFx:\s*\{\s*ttl:\s*0,\s*intensity:\s*0,\s*pulse:\s*0/);
+  assert.match(appJs, /hitStop:\s*\{\s*ttl:\s*0,\s*intensity:\s*0/);
   assert.match(appJs, /state\.weapon\.recoil = Math\.min\(1, state\.weapon\.recoil \+ 0\.9\)/);
   assert.match(appJs, /state\.weapon\.shotLightTtl = Math\.max\(state\.weapon\.shotLightTtl, 130\)/);
   assert.match(appJs, /state\.weapon\.swayTargetX = normalizedX/);
@@ -92,6 +93,10 @@ test('runtime includes recoil and hit-marker feedback for shooter feel', () => {
   assert.match(appJs, /z\.staggerMs = Math\.max\(z\.staggerMs, z\.isAlpha \? 170 : 130\)/);
   assert.match(appJs, /function triggerDamageOverlay\(amount\)/);
   assert.match(appJs, /state\.damageFx\.ttl = Math\.max\(state\.damageFx\.ttl, 380 \+ normalized \* 240\)/);
+  assert.match(appJs, /function triggerHitStop\(strength = 0\.5\)/);
+  assert.match(appJs, /state\.hitStop\.ttl = Math\.max\(state\.hitStop\.ttl, 24 \+ power \* 46\)/);
+  assert.match(appJs, /const worldDt = dt \* worldScale/);
+  assert.match(appJs, /state\.nextSpawnMs -= worldDt/);
   assert.match(appJs, /if \(state\.damageFx\.ttl <= 0\) return;/);
   assert.match(appJs, /const sparks = \[]/);
   assert.match(appJs, /ringMax:/);
