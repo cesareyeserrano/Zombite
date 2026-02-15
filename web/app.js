@@ -1108,6 +1108,7 @@ function drawSkyGround() {
   gradient.addColorStop(1, shadeColor(scene.groundBottom, -46));
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, ui.canvas.width, ui.canvas.height);
+  drawAtmosphericDepth();
   drawBackFog();
   drawGroundPlane();
   if (state.perf.quality === "high") {
@@ -1116,6 +1117,7 @@ function drawSkyGround() {
     drawSceneLabel(`${scene.name} (Performance)`);
   }
   drawShotLightOverlay();
+  drawScreenGrade();
   drawFilmNoise();
   drawVignette();
 }
@@ -1142,6 +1144,10 @@ function drawZombie(z) {
 
   ctx.save();
   ctx.translate(z.x, z.y);
+  ctx.fillStyle = "rgba(0, 0, 0, 0.28)";
+  ctx.beginPath();
+  ctx.ellipse(0, legLength * 0.94, shoulder * 1.45, shoulder * 0.44, 0, 0, Math.PI * 2);
+  ctx.fill();
   ctx.rotate(sideLean + forwardLean + (z.hitTilt || 0));
   ctx.globalAlpha = 0.8 + depth * 0.2;
   ctx.lineCap = "round";
@@ -1182,7 +1188,15 @@ function drawZombie(z) {
   ctx.lineTo(shoulder * 0.45 - swing * 0.35, hipY + legLength);
   ctx.stroke();
 
-  ctx.fillStyle = z.isAlpha ? "#4f3732" : "#364133";
+  const torsoGrad = ctx.createLinearGradient(0, torsoTop - headRadius, 0, hipY + legLength * 0.4);
+  if (z.isAlpha) {
+    torsoGrad.addColorStop(0, "#6a4b45");
+    torsoGrad.addColorStop(1, "#3c2b29");
+  } else {
+    torsoGrad.addColorStop(0, "#51644b");
+    torsoGrad.addColorStop(1, "#293629");
+  }
+  ctx.fillStyle = torsoGrad;
   ctx.beginPath();
   ctx.moveTo(-shoulder * 1.1, torsoTop + shoulder * 0.2);
   ctx.lineTo(shoulder * 1.1, torsoTop + shoulder * 0.2);
@@ -1194,7 +1208,22 @@ function drawZombie(z) {
   ctx.lineWidth = 2 * scale;
   ctx.stroke();
 
-  ctx.fillStyle = z.isAlpha ? "#766159" : "#68775e";
+  const headGrad = ctx.createRadialGradient(
+    -headRadius * 0.2,
+    torsoTop - headRadius * 0.58,
+    1,
+    0,
+    torsoTop - headRadius * 0.38,
+    headRadius * 1.25,
+  );
+  if (z.isAlpha) {
+    headGrad.addColorStop(0, "#92776f");
+    headGrad.addColorStop(1, "#584842");
+  } else {
+    headGrad.addColorStop(0, "#839277");
+    headGrad.addColorStop(1, "#4f5f4a");
+  }
+  ctx.fillStyle = headGrad;
   ctx.beginPath();
   ctx.arc(0, torsoTop - headRadius * 0.4, headRadius, 0, Math.PI * 2);
   ctx.fill();
@@ -1285,6 +1314,12 @@ function drawWeaponFrame() {
   ctx.fillRect(w * 0.64, h * 0.67, w * 0.34, h * 0.1);
   ctx.fillStyle = "rgba(86, 102, 123, 0.86)";
   ctx.fillRect(w * 0.69, h * 0.695, w * 0.22, h * 0.043);
+  const reflection = ctx.createLinearGradient(w * 0.64, h * 0.67, w * 0.64, h * 0.77);
+  reflection.addColorStop(0, "rgba(232, 241, 255, 0.14)");
+  reflection.addColorStop(0.4, "rgba(232, 241, 255, 0.03)");
+  reflection.addColorStop(1, "rgba(232, 241, 255, 0)");
+  ctx.fillStyle = reflection;
+  ctx.fillRect(w * 0.64, h * 0.67, w * 0.34, h * 0.1);
 
   // Barrel tube (front right).
   const tube = ctx.createLinearGradient(w * 0.86, h * 0.68, w, h * 0.76);
@@ -1319,9 +1354,14 @@ function drawWeaponFrame() {
   ctx.fillRect(w * 0.67, h * 0.772, w * 0.066, 2);
   ctx.fillStyle = `rgba(111, 232, 255, ${0.25 + pulse})`;
   ctx.fillRect(w * 0.84, h * 0.705, w * 0.07, 2);
+  ctx.fillStyle = `rgba(255, 116, 86, ${0.14 + recoil * 0.12})`;
+  ctx.fillRect(w * 0.92, h * 0.707, w * 0.026, 2);
 
   // Player forearm silhouette.
-  ctx.fillStyle = "rgba(124, 93, 72, 0.85)";
+  const armGrad = ctx.createLinearGradient(w * 0.56, h * 0.84, w * 0.69, h);
+  armGrad.addColorStop(0, "rgba(158, 122, 90, 0.88)");
+  armGrad.addColorStop(1, "rgba(103, 76, 58, 0.9)");
+  ctx.fillStyle = armGrad;
   ctx.beginPath();
   ctx.moveTo(w * 0.56, h);
   ctx.lineTo(w * 0.62, h * 0.87);
@@ -1329,6 +1369,12 @@ function drawWeaponFrame() {
   ctx.lineTo(w * 0.69, h);
   ctx.closePath();
   ctx.fill();
+  ctx.strokeStyle = "rgba(230, 198, 166, 0.22)";
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.moveTo(w * 0.61, h * 0.88);
+  ctx.lineTo(w * 0.68, h * 0.86);
+  ctx.stroke();
 
   ctx.strokeStyle = "rgba(214, 232, 255, 0.24)";
   ctx.lineWidth = 2.2;
@@ -1399,7 +1445,10 @@ function drawLaundromatInterior() {
   const w = ui.canvas.width;
 
   // Side walls and tunnel perspective.
-  ctx.fillStyle = "rgba(88, 79, 52, 0.55)";
+  const wallTint = ctx.createLinearGradient(0, h * 0.38, 0, h * 0.84);
+  wallTint.addColorStop(0, "rgba(118, 107, 68, 0.64)");
+  wallTint.addColorStop(1, "rgba(40, 34, 24, 0.76)");
+  ctx.fillStyle = wallTint;
   ctx.beginPath();
   ctx.moveTo(0, h * 0.52);
   ctx.lineTo(w * 0.23, h * 0.54);
@@ -1416,37 +1465,91 @@ function drawLaundromatInterior() {
   ctx.closePath();
   ctx.fill();
 
+  // Corridor cavity.
+  const corridor = ctx.createLinearGradient(w * 0.5, h * 0.4, w * 0.5, h * 0.86);
+  corridor.addColorStop(0, "rgba(36, 28, 26, 0.25)");
+  corridor.addColorStop(0.36, "rgba(28, 20, 19, 0.72)");
+  corridor.addColorStop(1, "rgba(15, 11, 11, 0.86)");
+  ctx.fillStyle = corridor;
+  ctx.fillRect(w * 0.29, h * 0.43, w * 0.42, h * 0.37);
+
   // Open door frames.
-  ctx.fillStyle = "rgba(60, 30, 24, 0.76)";
-  ctx.fillRect(w * 0.22, h * 0.44, 18, h * 0.3);
-  ctx.fillRect(w * 0.76, h * 0.44, 18, h * 0.3);
-  ctx.fillStyle = "rgba(212, 203, 183, 0.75)";
-  ctx.fillRect(w * 0.22 + 20, h * 0.46, w * 0.11, h * 0.26);
-  ctx.fillRect(w * 0.65, h * 0.46, w * 0.11, h * 0.26);
+  ctx.fillStyle = "rgba(72, 36, 30, 0.86)";
+  ctx.fillRect(w * 0.21, h * 0.42, 20, h * 0.34);
+  ctx.fillRect(w * 0.77, h * 0.42, 20, h * 0.34);
+  const doorLight = ctx.createLinearGradient(0, h * 0.46, 0, h * 0.74);
+  doorLight.addColorStop(0, "rgba(223, 216, 194, 0.86)");
+  doorLight.addColorStop(1, "rgba(182, 171, 149, 0.54)");
+  ctx.fillStyle = doorLight;
+  ctx.fillRect(w * 0.23, h * 0.46, w * 0.11, h * 0.28);
+  ctx.fillRect(w * 0.66, h * 0.46, w * 0.11, h * 0.28);
 
   // Laundromat sign.
-  ctx.fillStyle = "rgba(227, 192, 88, 0.83)";
-  ctx.fillRect(w * 0.28, h * 0.18, w * 0.44, h * 0.12);
-  ctx.fillStyle = "rgba(192, 27, 27, 0.94)";
-  ctx.font = "700 52px Oswald";
+  ctx.fillStyle = "rgba(35, 70, 72, 0.9)";
+  ctx.fillRect(w * 0.27, h * 0.175, w * 0.46, h * 0.125);
+  ctx.fillStyle = "rgba(235, 198, 95, 0.9)";
+  ctx.fillRect(w * 0.28, h * 0.185, w * 0.44, h * 0.105);
+  ctx.strokeStyle = "rgba(25, 36, 42, 0.6)";
+  ctx.lineWidth = 4;
+  ctx.strokeRect(w * 0.28, h * 0.185, w * 0.44, h * 0.105);
+  ctx.fillStyle = "rgba(192, 33, 31, 0.96)";
+  ctx.font = "700 50px Oswald";
   ctx.textAlign = "center";
   ctx.fillText("LAUNDROMAT", w * 0.5, h * 0.265);
+  ctx.fillStyle = "rgba(39, 46, 55, 0.72)";
+  ctx.font = "700 16px Oswald";
+  ctx.fillText("SELF SERVICE", w * 0.5, h * 0.292);
 
   // Warm center light.
-  const light = ctx.createRadialGradient(w * 0.5, h * 0.47, 20, w * 0.5, h * 0.56, h * 0.34);
-  light.addColorStop(0, "rgba(255, 244, 175, 0.6)");
-  light.addColorStop(0.55, "rgba(255, 149, 54, 0.35)");
+  const light = ctx.createRadialGradient(w * 0.5, h * 0.47, 14, w * 0.5, h * 0.58, h * 0.36);
+  light.addColorStop(0, "rgba(255, 248, 196, 0.78)");
+  light.addColorStop(0.42, "rgba(255, 175, 86, 0.36)");
   light.addColorStop(1, "rgba(0, 0, 0, 0)");
   ctx.fillStyle = light;
   ctx.fillRect(0, 0, w, h);
 
+  // Floor tiles with perspective lines.
+  const floorTop = h * 0.67;
+  for (let row = 0; row < 8; row += 1) {
+    const t0 = row / 8;
+    const t1 = (row + 1) / 8;
+    const y0 = floorTop + (h - floorTop) * Math.pow(t0, 1.25);
+    const y1 = floorTop + (h - floorTop) * Math.pow(t1, 1.25);
+    const inset0 = w * 0.5 * (1 - t0) * 0.36;
+    const inset1 = w * 0.5 * (1 - t1) * 0.36;
+    const columns = 10;
+    for (let col = 0; col < columns; col += 1) {
+      const x0a = inset0 + ((w - inset0 * 2) * col) / columns;
+      const x0b = inset0 + ((w - inset0 * 2) * (col + 1)) / columns;
+      const x1a = inset1 + ((w - inset1 * 2) * col) / columns;
+      const x1b = inset1 + ((w - inset1 * 2) * (col + 1)) / columns;
+      ctx.beginPath();
+      ctx.moveTo(x0a, y0);
+      ctx.lineTo(x0b, y0);
+      ctx.lineTo(x1b, y1);
+      ctx.lineTo(x1a, y1);
+      ctx.closePath();
+      const dark = (row + col) % 2 === 0;
+      ctx.fillStyle = dark ? "rgba(95, 77, 52, 0.4)" : "rgba(146, 118, 80, 0.34)";
+      ctx.fill();
+    }
+  }
+
   // Washer blocks at left.
-  ctx.fillStyle = "rgba(123, 131, 136, 0.48)";
   for (let i = 0; i < 3; i += 1) {
-    const x = 26 + i * 82;
-    ctx.fillRect(x, h * 0.63, 74, h * 0.17);
-    ctx.strokeStyle = "rgba(197, 215, 220, 0.4)";
-    ctx.strokeRect(x + 12, h * 0.67, 46, 46);
+    const x = 24 + i * 84;
+    const y = h * 0.62;
+    const body = ctx.createLinearGradient(x, y, x, y + h * 0.18);
+    body.addColorStop(0, "rgba(147, 154, 161, 0.64)");
+    body.addColorStop(1, "rgba(78, 86, 94, 0.58)");
+    ctx.fillStyle = body;
+    ctx.fillRect(x, y, 76, h * 0.18);
+    ctx.strokeStyle = "rgba(197, 215, 220, 0.3)";
+    ctx.strokeRect(x + 11, y + h * 0.04, 48, 48);
+    ctx.fillStyle = "rgba(24, 31, 37, 0.58)";
+    ctx.beginPath();
+    ctx.arc(x + 35, y + h * 0.08, 13, 0, Math.PI * 2);
+    ctx.fill();
   }
 
   drawSceneLabel("Laundromat");
@@ -1895,33 +1998,79 @@ function drawHitMarker() {
 
 function drawGroundPlane() {
   const horizon = ui.canvas.height * 0.52;
-  const maxY = ui.canvas.height;
+  const w = ui.canvas.width;
+  const h = ui.canvas.height;
   ctx.save();
-  ctx.strokeStyle = "rgba(255, 176, 176, 0.08)";
-  ctx.lineWidth = 1;
-  for (let y = horizon + 26; y < maxY; y += 26) {
-    const bend = (y - horizon) * 0.08;
+  for (let row = 0; row < 13; row += 1) {
+    const t0 = row / 13;
+    const t1 = (row + 1) / 13;
+    const y0 = horizon + (h - horizon) * Math.pow(t0, 1.46);
+    const y1 = horizon + (h - horizon) * Math.pow(t1, 1.46);
+    const inset0 = w * 0.5 * (1 - t0) * 0.92;
+    const inset1 = w * 0.5 * (1 - t1) * 0.92;
+    const strips = 14;
+    for (let col = 0; col < strips; col += 1) {
+      const dark = (row + col) % 2 === 0;
+      const x0a = inset0 + ((w - inset0 * 2) * col) / strips;
+      const x0b = inset0 + ((w - inset0 * 2) * (col + 1)) / strips;
+      const x1a = inset1 + ((w - inset1 * 2) * col) / strips;
+      const x1b = inset1 + ((w - inset1 * 2) * (col + 1)) / strips;
+      ctx.beginPath();
+      ctx.moveTo(x0a, y0);
+      ctx.lineTo(x0b, y0);
+      ctx.lineTo(x1b, y1);
+      ctx.lineTo(x1a, y1);
+      ctx.closePath();
+      ctx.fillStyle = dark ? "rgba(42, 36, 30, 0.22)" : "rgba(118, 104, 84, 0.18)";
+      ctx.fill();
+    }
+    ctx.strokeStyle = "rgba(255, 204, 150, 0.06)";
+    ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.quadraticCurveTo(ui.canvas.width * 0.5, y + bend, ui.canvas.width, y);
-    ctx.stroke();
-  }
-  for (let x = 0; x <= ui.canvas.width; x += 90) {
-    ctx.beginPath();
-    ctx.moveTo(x, maxY);
-    ctx.lineTo(ui.canvas.width * 0.5 + (x - ui.canvas.width * 0.5) * 0.1, horizon);
+    ctx.moveTo(inset0, y0);
+    ctx.lineTo(w - inset0, y0);
     ctx.stroke();
   }
   ctx.restore();
 }
 
+function drawAtmosphericDepth() {
+  const h = ui.canvas.height;
+  const w = ui.canvas.width;
+  const topGlow = ctx.createRadialGradient(w * 0.52, h * 0.28, 20, w * 0.52, h * 0.28, h * 0.72);
+  topGlow.addColorStop(0, "rgba(255, 219, 152, 0.2)");
+  topGlow.addColorStop(0.48, "rgba(255, 147, 82, 0.1)");
+  topGlow.addColorStop(1, "rgba(0, 0, 0, 0)");
+  ctx.fillStyle = topGlow;
+  ctx.fillRect(0, 0, w, h);
+
+  const edgeShade = ctx.createLinearGradient(0, 0, w, 0);
+  edgeShade.addColorStop(0, "rgba(6, 8, 12, 0.26)");
+  edgeShade.addColorStop(0.16, "rgba(6, 8, 12, 0)");
+  edgeShade.addColorStop(0.84, "rgba(6, 8, 12, 0)");
+  edgeShade.addColorStop(1, "rgba(6, 8, 12, 0.32)");
+  ctx.fillStyle = edgeShade;
+  ctx.fillRect(0, 0, w, h);
+}
+
 function drawBackFog() {
   const fog = ctx.createLinearGradient(0, ui.canvas.height * 0.2, 0, ui.canvas.height * 0.75);
-  fog.addColorStop(0, "rgba(112, 31, 31, 0.08)");
-  fog.addColorStop(0.55, "rgba(27, 18, 18, 0.22)");
-  fog.addColorStop(1, "rgba(9, 6, 6, 0.42)");
+  fog.addColorStop(0, "rgba(112, 31, 31, 0.04)");
+  fog.addColorStop(0.55, "rgba(27, 18, 18, 0.17)");
+  fog.addColorStop(1, "rgba(9, 6, 6, 0.38)");
   ctx.fillStyle = fog;
   ctx.fillRect(0, 0, ui.canvas.width, ui.canvas.height);
+}
+
+function drawScreenGrade() {
+  const w = ui.canvas.width;
+  const h = ui.canvas.height;
+  const warm = ctx.createLinearGradient(0, 0, 0, h);
+  warm.addColorStop(0, "rgba(255, 178, 120, 0.06)");
+  warm.addColorStop(0.45, "rgba(255, 150, 90, 0.03)");
+  warm.addColorStop(1, "rgba(56, 94, 122, 0.05)");
+  ctx.fillStyle = warm;
+  ctx.fillRect(0, 0, w, h);
 }
 
 function drawShotLightOverlay() {
