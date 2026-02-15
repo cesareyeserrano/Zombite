@@ -206,6 +206,10 @@ const state = {
   },
   weapon: {
     recoil: 0,
+    swayX: 0,
+    swayY: 0,
+    swayTargetX: 0,
+    swayTargetY: 0,
   },
   camera: {
     shakeMs: 0,
@@ -289,6 +293,8 @@ ui.canvas.addEventListener("pointerenter", (event) => {
 
 ui.canvas.addEventListener("pointerleave", () => {
   state.pointerVisible = false;
+  state.weapon.swayTargetX = 0;
+  state.weapon.swayTargetY = 0;
   if (!IS_COARSE_POINTER) {
     snapCrosshairToCenter();
   }
@@ -639,6 +645,9 @@ function update(dt) {
   if (state.weapon.recoil > 0) {
     state.weapon.recoil = Math.max(0, state.weapon.recoil - dt * 0.01);
   }
+  const swayLerp = Math.min(1, dt * 0.012);
+  state.weapon.swayX += (state.weapon.swayTargetX - state.weapon.swayX) * swayLerp;
+  state.weapon.swayY += (state.weapon.swayTargetY - state.weapon.swayY) * swayLerp;
 
   if (state.camera.shakeMs > 0) {
     state.camera.shakeMs = Math.max(0, state.camera.shakeMs - dt);
@@ -1084,10 +1093,13 @@ function drawWeaponFrame() {
   const w = ui.canvas.width;
   const pulse = 0.06 + Math.sin(performance.now() * 0.003) * 0.04;
   const recoil = state.weapon.recoil;
+  const swayX = state.weapon.swayX;
+  const swayY = state.weapon.swayY;
+  const bob = Math.sin(performance.now() * 0.004) * 0.005;
 
   ctx.save();
-  ctx.translate(w * recoil * 0.018, h * recoil * 0.012);
-  ctx.rotate(-recoil * 0.045);
+  ctx.translate(w * (recoil * 0.018 + swayX * 0.02), h * (recoil * 0.012 + swayY * 0.02 + bob));
+  ctx.rotate(-recoil * 0.045 + swayX * 0.022);
 
   // Right-side receiver block.
   ctx.fillStyle = "rgba(16, 22, 30, 0.94)";
@@ -1451,6 +1463,8 @@ function snapCrosshairToCenter() {
   const rect = ui.canvas.getBoundingClientRect();
   const x = rect.width * 0.5;
   const y = rect.height * 0.5;
+  state.weapon.swayTargetX = 0;
+  state.weapon.swayTargetY = 0;
   ui.crosshair.style.left = `${x}px`;
   ui.crosshair.style.top = `${y}px`;
 }
@@ -1459,6 +1473,10 @@ function moveCrosshair(event) {
   const rect = ui.canvas.getBoundingClientRect();
   const x = event.clientX - rect.left;
   const y = event.clientY - rect.top;
+  const normalizedX = clamp((x / rect.width) * 2 - 1, -1, 1);
+  const normalizedY = clamp((y / rect.height) * 2 - 1, -1, 1);
+  state.weapon.swayTargetX = normalizedX;
+  state.weapon.swayTargetY = normalizedY;
   ui.crosshair.style.left = `${x}px`;
   ui.crosshair.style.top = `${y}px`;
 }
@@ -1474,11 +1492,22 @@ function clamp(value, min, max) {
 }
 
 function addImpact(x, y, tone) {
+  const sparks = [];
+  const sparkCount = 5 + Math.floor(Math.random() * 4);
+  for (let i = 0; i < sparkCount; i += 1) {
+    sparks.push({
+      angle: Math.random() * Math.PI * 2,
+      length: 8 + Math.random() * 16,
+      width: 0.9 + Math.random() * 1.1,
+    });
+  }
   state.impacts.push({
     x,
     y,
     color: tone,
     ttl: 140,
+    ringMax: 18 + Math.random() * 14,
+    sparks,
   });
   if (state.impacts.length > 24) state.impacts.shift();
 }
@@ -1537,11 +1566,33 @@ function currentShakeOffset() {
 function drawImpacts() {
   for (const hit of state.impacts) {
     const life = clamp(hit.ttl / 140, 0, 1);
-    const radius = 4 + (1 - life) * 22;
+    const radius = 4 + (1 - life) * hit.ringMax;
     ctx.save();
-    ctx.globalAlpha = life * 0.8;
+    ctx.globalAlpha = life * 0.84;
     ctx.strokeStyle = hit.color;
-    ctx.lineWidth = 1.8;
+    ctx.lineWidth = 1.4 + life * 1.1;
+    ctx.beginPath();
+    ctx.arc(hit.x, hit.y, radius, 0, Math.PI * 2);
+    ctx.stroke();
+
+    for (const spark of hit.sparks) {
+      const sparkLife = 0.6 + life * 0.4;
+      const inner = radius * 0.3;
+      const outer = inner + spark.length * (1 - life * 0.1);
+      const x1 = hit.x + Math.cos(spark.angle) * inner;
+      const y1 = hit.y + Math.sin(spark.angle) * inner;
+      const x2 = hit.x + Math.cos(spark.angle) * outer;
+      const y2 = hit.y + Math.sin(spark.angle) * outer;
+      ctx.globalAlpha = sparkLife * 0.85;
+      ctx.lineWidth = spark.width;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+    }
+
+    ctx.globalAlpha = life * 0.65;
+    ctx.lineWidth = 1.6;
     ctx.beginPath();
     ctx.moveTo(hit.x - radius, hit.y);
     ctx.lineTo(hit.x + radius, hit.y);
@@ -1552,7 +1603,7 @@ function drawImpacts() {
     ctx.moveTo(hit.x - radius * 0.7, hit.y + radius * 0.7);
     ctx.lineTo(hit.x + radius * 0.7, hit.y - radius * 0.7);
     ctx.stroke();
-    ctx.fillStyle = "rgba(255, 73, 73, 0.35)";
+    ctx.fillStyle = "rgba(255, 219, 175, 0.42)";
     ctx.beginPath();
     ctx.arc(hit.x, hit.y, Math.max(1.4, radius * 0.12), 0, Math.PI * 2);
     ctx.fill();
