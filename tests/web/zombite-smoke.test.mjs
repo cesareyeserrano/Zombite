@@ -56,8 +56,17 @@ test('app hardens embed messaging with burst guard telemetry', () => {
   assert.match(appJs, /INVALID_MESSAGE_COOLDOWN_MS/);
   assert.match(appJs, /recordEmbedReject\("origin_blocked"/);
   assert.match(appJs, /recordEmbedReject\("unknown_schema"/);
+  assert.match(appJs, /recordEmbedReject\("invalid_values"/);
   assert.match(appJs, /"burst_blocked"/);
   assert.match(appJs, /\[Zombite\]\[embed\] \${outcome}:\${reason}/);
+});
+
+test('app ignores known-schema payloads when values are invalid', () => {
+  assert.match(appJs, /const configResult = applyConfig\(message\.payload\)/);
+  assert.match(appJs, /if \(!configResult\.applied\) \{/);
+  assert.match(appJs, /setStatus\(statusText\("Config ignored"\)\)/);
+  assert.match(appJs, /return {\s*applied: false,/);
+  assert.match(appJs, /"Config ignored": "Configuracion ignorada"/);
 });
 
 test('keyboard controls cover primary actions', () => {

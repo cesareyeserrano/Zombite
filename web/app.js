@@ -385,8 +385,14 @@ function handleEmbedMessage(event) {
     return;
   }
 
+  const configResult = applyConfig(message.payload);
+  if (!configResult.applied) {
+    recordEmbedReject("invalid_values", event, now);
+    setStatus(statusText("Config ignored"));
+    return;
+  }
+
   state.embed.acceptedMessages += 1;
-  applyConfig(message.payload);
   setStatus(statusText("Config updated"));
   logEmbedMessage("accepted", "config_updated", event.origin, now);
 }
@@ -476,11 +482,23 @@ function normalizeConfigInput(raw) {
 
 function applyConfig(incoming) {
   const sanitized = sanitizeConfig(incoming || {});
+  if (Object.keys(sanitized).length === 0) {
+    refreshHud();
+    return {
+      applied: false,
+      sanitized,
+    };
+  }
+
   state.config = { ...state.config, ...sanitized };
   if (!state.running || state.gameOver) {
     state.level = state.config.startLevel;
   }
   refreshHud();
+  return {
+    applied: true,
+    sanitized,
+  };
 }
 
 function startGame() {
@@ -823,6 +841,7 @@ function statusText(source) {
       Paused: "Pausa",
       Resumed: "Reanudado",
       "Config updated": "Configuracion actualizada",
+      "Config ignored": "Configuracion ignorada",
       "You were overrun": "Los zombies te alcanzaron",
       "Victory - all 10 levels complete": "Victoria - completaste 10 niveles",
       Victory: "Victoria",

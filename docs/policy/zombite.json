@@ -1,7 +1,7 @@
 {
   "ok": true,
   "feature": "zombite",
-  "evaluatedAt": "2026-02-15T00:23:13.712Z",
+  "evaluatedAt": "2026-02-15T01:22:21.073Z",
   "policy": {
     "allowDependencyChanges": false,
     "blockedImports": [],
@@ -9,13 +9,11 @@
   },
   "files": {
     "changed": [
-      "backlog/zombite/backlog.md",
-      "docs/discovery/zombite.md",
-      "docs/insight/status.html",
-      "docs/plan/zombite.md",
       "docs/policy/zombite.json",
       "docs/verification/zombite.json",
-      "tests/zombite/tests.md"
+      "tests/web/zombite-smoke.test.mjs",
+      "web/README.md",
+      "web/app.js"
     ],
     "dependencyChanged": []
   },

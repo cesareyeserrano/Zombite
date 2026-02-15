@@ -43,3 +43,7 @@ iframe.contentWindow.postMessage(
   "https://your-host.com"
 );
 ```
+
+Validation behavior:
+- Unknown payload keys are rejected.
+- Known keys with invalid values are ignored, keeping safe defaults/current config.
