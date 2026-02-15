@@ -54,8 +54,8 @@ function spawnIntervalMs(level, diffFactor, balance) {
 
 function avgHpPerKill(level, balance) {
   const hpScale = balance.LEVEL_HP_SCALE[level - 1];
-  const normalHp = Math.round((1 + Math.floor(level / 4)) * hpScale);
-  const alphaHp = Math.round((3 + Math.floor(level / 3)) * hpScale);
+  const normalHp = Math.round((1 + Math.floor((level - 1) / 4)) * hpScale);
+  const alphaHp = Math.round((3 + Math.floor((level - 1) / 3)) * hpScale);
   const alphaChance = balance.ALPHA_LEVELS.has(level) ? 0.03 + (level / 10) * 0.11 : 0;
   return normalHp * (1 - alphaChance) + alphaHp * alphaChance;
 }

@@ -772,7 +772,7 @@ function spawnZombie() {
   const firstAlphaThisLevel = isAlpha && !state.alphaSpawnedInLevel;
   const rushLevel = clamp((state.level - 5) / 5, 0, 1);
   const rush = clamp((isAlpha ? 0.45 : 0) + rushLevel * 0.82 + Math.random() * 0.18, 0, 1);
-  const baseHp = isAlpha ? 3 + Math.floor(state.level / 3) : 1 + Math.floor(state.level / 4);
+  const baseHp = isAlpha ? 3 + Math.floor((state.level - 1) / 3) : 1 + Math.floor((state.level - 1) / 4);
   const scaledHp = Math.max(1, Math.round(baseHp * hpScale));
 
   const z = {

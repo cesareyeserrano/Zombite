@@ -157,7 +157,7 @@ test('pacing model keeps progression gradual and level 10 reachable for medium s
   for (let i = 1; i < levelTimes.length; i += 1) {
     const prev = levelTimes[i - 1];
     const current = levelTimes[i];
-    assert.ok(current <= prev * 2.7, `abrupt spike at level ${i + 1}: ${prev} -> ${current}`);
+    assert.ok(current <= prev * 2.0, `abrupt spike at level ${i + 1}: ${prev} -> ${current}`);
   }
 
   const level10Ms = estimateLevelMs(10, 'normal');
@@ -170,7 +170,7 @@ test('alpha encounters are distinct, tougher, and progression-safe', () => {
   assert.match(appJs, /const firstAlphaThisLevel\s*=\s*isAlpha && !state\.alphaSpawnedInLevel/);
   assert.match(appJs, /setStatus\(statusText\("Alpha spotted"\)\)/);
   assert.match(appJs, /ctx\.fillText\("ALPHA", 0, torsoTop - headRadius \* 2\.1\)/);
-  assert.match(appJs, /const baseHp = isAlpha \? 3 \+ Math\.floor\(state\.level \/ 3\) : 1 \+ Math\.floor\(state\.level \/ 4\)/);
+  assert.match(appJs, /const baseHp = isAlpha \? 3 \+ Math\.floor\(\(state\.level - 1\) \/ 3\) : 1 \+ Math\.floor\(\(state\.level - 1\) \/ 4\)/);
   assert.match(appJs, /state\.score \+= z\.isAlpha \? 55 : 10/);
   assert.match(appJs, /if \(state\.killsInLevel >= state\.goalInLevel\) {\s*onLevelComplete\(\);\s*break;\s*}/);
 
