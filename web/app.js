@@ -210,6 +210,7 @@ const state = {
     swayY: 0,
     swayTargetX: 0,
     swayTargetY: 0,
+    shotLightTtl: 0,
   },
   camera: {
     shakeMs: 0,
@@ -563,6 +564,12 @@ function startGame() {
   state.camera.intensity = 0;
   state.ammo = BASE_MAGAZINE;
   state.reloading = false;
+  state.weapon.recoil = 0;
+  state.weapon.swayX = 0;
+  state.weapon.swayY = 0;
+  state.weapon.swayTargetX = 0;
+  state.weapon.swayTargetY = 0;
+  state.weapon.shotLightTtl = 0;
   hideOutcome();
   beginLevel();
   state.lastTs = performance.now();
@@ -645,6 +652,9 @@ function update(dt) {
   if (state.weapon.recoil > 0) {
     state.weapon.recoil = Math.max(0, state.weapon.recoil - dt * 0.01);
   }
+  if (state.weapon.shotLightTtl > 0) {
+    state.weapon.shotLightTtl = Math.max(0, state.weapon.shotLightTtl - dt);
+  }
   const swayLerp = Math.min(1, dt * 0.012);
   state.weapon.swayX += (state.weapon.swayTargetX - state.weapon.swayX) * swayLerp;
   state.weapon.swayY += (state.weapon.swayTargetY - state.weapon.swayY) * swayLerp;
@@ -669,6 +679,8 @@ function spawnZombie() {
   const alphaRoll = alphaLevelGate && Math.random() < 0.03 + levelBias * 0.11;
   const isAlpha = forceAlpha || (alphaLevelGate && alphaRoll);
   const firstAlphaThisLevel = isAlpha && !state.alphaSpawnedInLevel;
+  const rushLevel = clamp((state.level - 5) / 5, 0, 1);
+  const rush = clamp((isAlpha ? 0.45 : 0) + rushLevel * 0.82 + Math.random() * 0.18, 0, 1);
   const baseHp = isAlpha ? 3 + Math.floor(state.level / 3) : 1 + Math.floor(state.level / 4);
   const scaledHp = Math.max(1, Math.round(baseHp * hpScale));
 
@@ -678,9 +690,10 @@ function spawnZombie() {
     y: 120 + Math.random() * 40,
     radius: (isAlpha ? 36 : 24) + profile.sizeBoost,
     hp: scaledHp + profile.hpBoost,
-    speed: (1.0 + levelBias * 0.95 + profile.speedBoost) * difficultyFactor() * pace,
+    speed: (1.0 + levelBias * 0.95 + profile.speedBoost) * difficultyFactor() * pace * (1 + rush * 0.24),
     wobble: (isAlpha ? 24 : 14) + profile.wobbleBoost,
-    wobbleSpeed: isAlpha ? 1.6 : 1.0,
+    wobbleSpeed: (isAlpha ? 1.6 : 1.0) + rush * 0.46,
+    rush,
     phase: Math.random() * 1000,
     color: isAlpha ? profile.alphaColor : profile.zombieColor,
   };
@@ -740,6 +753,7 @@ function shoot(point) {
   }
   state.ammo -= 1;
   state.weapon.recoil = Math.min(1, state.weapon.recoil + 0.9);
+  state.weapon.shotLightTtl = Math.max(state.weapon.shotLightTtl, 130);
   flashMuzzle();
   startCameraShake(65, 2.4);
   playShotSound();
@@ -972,6 +986,7 @@ function drawSkyGround() {
   } else {
     drawSceneLabel(`${scene.name} (Performance)`);
   }
+  drawShotLightOverlay();
   drawFilmNoise();
   drawVignette();
 }
@@ -985,7 +1000,11 @@ function drawZombie(z) {
   const armLength = (z.isAlpha ? 34 : 29) * scale;
   const legLength = (z.isAlpha ? 46 : 42) * scale;
   const headRadius = (z.isAlpha ? 14 : 12) * scale;
-  const swing = Math.sin((performance.now() + z.phase) * 0.008) * 6.5 * scale;
+  const sprintWeight = z.rush || 0;
+  const strideRate = 0.008 + sprintWeight * 0.006 + (z.isAlpha ? 0.004 : 0);
+  const swing = Math.sin((performance.now() + z.phase) * strideRate) * (6.5 + sprintWeight * 10) * scale;
+  const sideLean = Math.sin((performance.now() + z.phase) * strideRate * 0.5) * (0.03 + sprintWeight * 0.07);
+  const forwardLean = 0.01 + sprintWeight * 0.06;
   const torsoTop = -bodyHeight * 0.68;
   const hipY = -bodyHeight * 0.12;
 
@@ -993,6 +1012,7 @@ function drawZombie(z) {
 
   ctx.save();
   ctx.translate(z.x, z.y);
+  ctx.rotate(sideLean + forwardLean);
   ctx.globalAlpha = 0.8 + depth * 0.2;
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
@@ -1675,6 +1695,35 @@ function drawBackFog() {
   fog.addColorStop(1, "rgba(9, 6, 6, 0.42)");
   ctx.fillStyle = fog;
   ctx.fillRect(0, 0, ui.canvas.width, ui.canvas.height);
+}
+
+function drawShotLightOverlay() {
+  if (state.weapon.shotLightTtl <= 0) return;
+  const h = ui.canvas.height;
+  const w = ui.canvas.width;
+  const life = clamp(state.weapon.shotLightTtl / 130, 0, 1);
+  const flicker = 0.88 + Math.random() * 0.22;
+  const muzzleX = w * (0.74 + state.weapon.swayX * 0.02);
+  const muzzleY = h * (0.8 + state.weapon.swayY * 0.015);
+
+  const radial = ctx.createRadialGradient(muzzleX, muzzleY, 10, muzzleX, muzzleY, h * 0.5);
+  radial.addColorStop(0, `rgba(255, 246, 196, ${0.34 * life * flicker})`);
+  radial.addColorStop(0.3, `rgba(255, 203, 132, ${0.2 * life * flicker})`);
+  radial.addColorStop(1, "rgba(255, 203, 132, 0)");
+  ctx.fillStyle = radial;
+  ctx.fillRect(0, 0, w, h);
+
+  const beam = ctx.createLinearGradient(muzzleX, muzzleY, w * 0.48, h * 0.55);
+  beam.addColorStop(0, `rgba(255, 216, 143, ${0.27 * life})`);
+  beam.addColorStop(1, "rgba(255, 216, 143, 0)");
+  ctx.fillStyle = beam;
+  ctx.beginPath();
+  ctx.moveTo(muzzleX - 8, muzzleY - 10);
+  ctx.lineTo(w * 0.43, h * 0.48);
+  ctx.lineTo(w * 0.57, h * 0.63);
+  ctx.lineTo(muzzleX + 10, muzzleY + 10);
+  ctx.closePath();
+  ctx.fill();
 }
 
 function drawFilmNoise() {
