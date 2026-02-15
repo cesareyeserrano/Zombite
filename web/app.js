@@ -219,6 +219,11 @@ const state = {
     shakeMs: 0,
     intensity: 0,
   },
+  damageFx: {
+    ttl: 0,
+    intensity: 0,
+    pulse: 0,
+  },
   audio: {
     ctx: null,
     unlocked: false,
@@ -587,6 +592,9 @@ function startGame() {
   state.bloodPools = [];
   state.camera.shakeMs = 0;
   state.camera.intensity = 0;
+  state.damageFx.ttl = 0;
+  state.damageFx.intensity = 0;
+  state.damageFx.pulse = 0;
   state.ammo = BASE_MAGAZINE;
   state.reloading = false;
   state.weapon.recoil = 0;
@@ -653,8 +661,24 @@ function update(dt) {
 
   for (let i = state.zombies.length - 1; i >= 0; i -= 1) {
     const z = state.zombies[i];
-    z.y += z.speed * (dt / 16.6);
+    const step = dt / 16.6;
+    const staggerFactor = z.staggerMs > 0 ? 0.34 : 1;
+    z.staggerMs = Math.max(0, z.staggerMs - dt);
+    z.y += z.speed * step * staggerFactor;
     z.x += Math.sin((performance.now() + z.phase) * 0.001 * z.wobbleSpeed) * z.wobble;
+    if (z.knockbackX || z.knockbackY) {
+      z.x += z.knockbackX * step;
+      z.y += z.knockbackY * step;
+      const decay = Math.pow(0.84, step);
+      z.knockbackX *= decay;
+      z.knockbackY *= decay;
+      if (Math.abs(z.knockbackX) < 0.02) z.knockbackX = 0;
+      if (Math.abs(z.knockbackY) < 0.02) z.knockbackY = 0;
+    }
+    if (z.hitTilt) {
+      z.hitTilt *= Math.pow(0.84, step);
+      if (Math.abs(z.hitTilt) < 0.002) z.hitTilt = 0;
+    }
 
     if (z.y > arenaHeight - 78) {
       applyPlayerDamage(z.isAlpha ? damageRate * 1.8 : damageRate);
@@ -684,6 +708,11 @@ function update(dt) {
   }
   if (state.weapon.shotLightTtl > 0) {
     state.weapon.shotLightTtl = Math.max(0, state.weapon.shotLightTtl - dt);
+  }
+  if (state.damageFx.ttl > 0) {
+    state.damageFx.ttl = Math.max(0, state.damageFx.ttl - dt);
+    state.damageFx.pulse += dt * 0.018;
+    state.damageFx.intensity = Math.max(0, state.damageFx.intensity - dt * 0.0006);
   }
   const swayLerp = Math.min(1, dt * 0.012);
   state.weapon.swayX += (state.weapon.swayTargetX - state.weapon.swayX) * swayLerp;
@@ -725,6 +754,10 @@ function spawnZombie() {
     wobble: (isAlpha ? 24 : 14) + profile.wobbleBoost,
     wobbleSpeed: (isAlpha ? 1.6 : 1.0) + rush * 0.46,
     rush,
+    knockbackX: 0,
+    knockbackY: 0,
+    staggerMs: 0,
+    hitTilt: 0,
     phase: Math.random() * 1000,
     color: isAlpha ? profile.alphaColor : profile.zombieColor,
   };
@@ -797,6 +830,7 @@ function shoot(point) {
     const precisionWindow = Math.max(2, 8 - Math.floor(state.level / 2));
     if (Math.hypot(dx, dy) <= z.radius + precisionWindow) {
       z.hp -= 1;
+      applyZombieImpactReaction(z, point);
       hit = true;
       triggerHitMarker(z.isAlpha ? "alpha" : "normal");
       addImpact(point.x, point.y, z.isAlpha ? "#ffbdb0" : "#b7ffbf");
@@ -1042,6 +1076,7 @@ function drawZombie(z) {
   const swing = Math.sin((performance.now() + z.phase) * strideRate) * (6.5 + sprintWeight * 10) * scale;
   const sideLean = Math.sin((performance.now() + z.phase) * strideRate * 0.5) * (0.03 + sprintWeight * 0.07);
   const forwardLean = 0.01 + sprintWeight * 0.06;
+  const hurtLife = clamp(z.staggerMs / (z.isAlpha ? 170 : 130), 0, 1);
   const torsoTop = -bodyHeight * 0.68;
   const hipY = -bodyHeight * 0.12;
 
@@ -1049,7 +1084,7 @@ function drawZombie(z) {
 
   ctx.save();
   ctx.translate(z.x, z.y);
-  ctx.rotate(sideLean + forwardLean);
+  ctx.rotate(sideLean + forwardLean + (z.hitTilt || 0));
   ctx.globalAlpha = 0.8 + depth * 0.2;
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
@@ -1129,6 +1164,13 @@ function drawZombie(z) {
   ctx.moveTo(-headRadius * 0.52, torsoTop + headRadius * 0.22);
   ctx.quadraticCurveTo(0, torsoTop + headRadius * 0.48, headRadius * 0.52, torsoTop + headRadius * 0.22);
   ctx.stroke();
+  if (hurtLife > 0) {
+    ctx.strokeStyle = `rgba(255, 138, 118, ${0.18 + hurtLife * 0.42})`;
+    ctx.lineWidth = 2.6 * scale;
+    ctx.beginPath();
+    ctx.ellipse(0, hipY * 0.24, shoulder * 1.45, bodyHeight * 0.55, 0, 0, Math.PI * 2);
+    ctx.stroke();
+  }
 
   if (z.isAlpha) {
     ctx.strokeStyle = "rgba(255, 102, 80, 0.88)";
@@ -1652,8 +1694,32 @@ function drawBloodPools() {
   }
 }
 
+function applyZombieImpactReaction(z, point) {
+  const muzzleX = ui.canvas.width * (0.74 + state.weapon.swayX * 0.02);
+  const muzzleY = ui.canvas.height * (0.8 + state.weapon.swayY * 0.015);
+  let vectorX = z.x - muzzleX;
+  let vectorY = z.y - muzzleY;
+  const length = Math.hypot(vectorX, vectorY) || 1;
+  vectorX /= length;
+  vectorY /= length;
+  const mass = z.isAlpha ? 0.88 : 1;
+  z.knockbackX += vectorX * 4.2 * mass;
+  z.knockbackY += vectorY * 5.1 * mass;
+  z.staggerMs = Math.max(z.staggerMs, z.isAlpha ? 170 : 130);
+  const side = point.x >= z.x ? 1 : -1;
+  z.hitTilt = clamp(z.hitTilt + side * 0.09 * mass, -0.32, 0.32);
+}
+
+function triggerDamageOverlay(amount) {
+  const normalized = clamp(amount / 24, 0.24, 1);
+  state.damageFx.ttl = Math.max(state.damageFx.ttl, 380 + normalized * 240);
+  state.damageFx.intensity = Math.max(state.damageFx.intensity, 0.35 + normalized * 0.65);
+  state.damageFx.pulse = 0;
+}
+
 function applyPlayerDamage(amount) {
   state.health -= amount;
+  triggerDamageOverlay(amount);
   startCameraShake(170, 5.8);
   playDamageSound();
 }
@@ -1937,6 +2003,38 @@ function drawVignette() {
   vignette.addColorStop(0, "rgba(0, 0, 0, 0)");
   vignette.addColorStop(1, "rgba(6, 3, 3, 0.72)");
   ctx.fillStyle = vignette;
+  ctx.fillRect(0, 0, ui.canvas.width, ui.canvas.height);
+
+  if (state.damageFx.ttl <= 0) return;
+  const life = clamp(state.damageFx.ttl / 620, 0, 1);
+  const pulse = 0.55 + Math.sin(state.damageFx.pulse) * 0.45;
+  const edgeAlpha = clamp((0.22 + state.damageFx.intensity * 0.58) * life * pulse, 0, 0.86);
+  const bloodEdge = ctx.createRadialGradient(
+    ui.canvas.width * 0.5,
+    ui.canvas.height * 0.58,
+    ui.canvas.height * 0.18,
+    ui.canvas.width * 0.5,
+    ui.canvas.height * 0.58,
+    ui.canvas.height * 0.9,
+  );
+  bloodEdge.addColorStop(0, "rgba(120, 0, 0, 0)");
+  bloodEdge.addColorStop(0.58, `rgba(128, 7, 7, ${edgeAlpha * 0.6})`);
+  bloodEdge.addColorStop(1, `rgba(84, 0, 0, ${edgeAlpha})`);
+  ctx.fillStyle = bloodEdge;
+  ctx.fillRect(0, 0, ui.canvas.width, ui.canvas.height);
+
+  const centerFlash = clamp((0.08 + state.damageFx.intensity * 0.16) * life, 0, 0.28);
+  const flash = ctx.createRadialGradient(
+    ui.canvas.width * 0.5,
+    ui.canvas.height * 0.66,
+    0,
+    ui.canvas.width * 0.5,
+    ui.canvas.height * 0.66,
+    ui.canvas.height * 0.52,
+  );
+  flash.addColorStop(0, `rgba(255, 112, 92, ${centerFlash})`);
+  flash.addColorStop(1, "rgba(255, 112, 92, 0)");
+  ctx.fillStyle = flash;
   ctx.fillRect(0, 0, ui.canvas.width, ui.canvas.height);
 }
 
