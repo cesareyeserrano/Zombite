@@ -200,6 +200,13 @@ const state = {
   },
   impacts: [],
   bloodPools: [],
+  hitMarker: {
+    ttl: 0,
+    tone: "normal",
+  },
+  weapon: {
+    recoil: 0,
+  },
   camera: {
     shakeMs: 0,
     intensity: 0,
@@ -626,6 +633,13 @@ function update(dt) {
     if (state.bloodPools[i].ttl <= 0) state.bloodPools.splice(i, 1);
   }
 
+  if (state.hitMarker.ttl > 0) {
+    state.hitMarker.ttl = Math.max(0, state.hitMarker.ttl - dt);
+  }
+  if (state.weapon.recoil > 0) {
+    state.weapon.recoil = Math.max(0, state.weapon.recoil - dt * 0.01);
+  }
+
   if (state.camera.shakeMs > 0) {
     state.camera.shakeMs = Math.max(0, state.camera.shakeMs - dt);
     if (state.camera.shakeMs === 0) {
@@ -716,6 +730,7 @@ function shoot(point) {
     return;
   }
   state.ammo -= 1;
+  state.weapon.recoil = Math.min(1, state.weapon.recoil + 0.9);
   flashMuzzle();
   startCameraShake(65, 2.4);
   playShotSound();
@@ -729,9 +744,11 @@ function shoot(point) {
     if (Math.hypot(dx, dy) <= z.radius + precisionWindow) {
       z.hp -= 1;
       hit = true;
+      triggerHitMarker(z.isAlpha ? "alpha" : "normal");
       addImpact(point.x, point.y, z.isAlpha ? "#ffbdb0" : "#b7ffbf");
       playHitSound(z.isAlpha);
       if (z.hp <= 0) {
+        triggerHitMarker(z.isAlpha ? "alpha_kill" : "kill");
         addBloodPool(z.x, z.y, z.isAlpha);
         playKillSound(z.isAlpha);
         state.zombies.splice(i, 1);
@@ -927,6 +944,7 @@ function draw() {
   drawImpacts();
   drawWeaponFrame();
   ctx.restore();
+  drawHitMarker();
 }
 
 function drawSkyGround() {
@@ -1065,8 +1083,11 @@ function drawWeaponFrame() {
   const h = ui.canvas.height;
   const w = ui.canvas.width;
   const pulse = 0.06 + Math.sin(performance.now() * 0.003) * 0.04;
+  const recoil = state.weapon.recoil;
 
   ctx.save();
+  ctx.translate(w * recoil * 0.018, h * recoil * 0.012);
+  ctx.rotate(-recoil * 0.045);
 
   // Right-side receiver block.
   ctx.fillStyle = "rgba(16, 22, 30, 0.94)";
@@ -1537,6 +1558,41 @@ function drawImpacts() {
     ctx.fill();
     ctx.restore();
   }
+}
+
+function triggerHitMarker(tone = "normal") {
+  state.hitMarker.ttl = tone === "alpha" || tone === "alpha_kill" ? 170 : 120;
+  state.hitMarker.tone = tone;
+}
+
+function drawHitMarker() {
+  if (state.hitMarker.ttl <= 0) return;
+  const h = ui.canvas.height;
+  const w = ui.canvas.width;
+  const maxTtl = state.hitMarker.tone === "alpha" || state.hitMarker.tone === "alpha_kill" ? 170 : 120;
+  const life = clamp(state.hitMarker.ttl / maxTtl, 0, 1);
+  const spread = 10 + (1 - life) * 8;
+  const inner = 5 + (1 - life) * 2;
+  const alpha = 0.3 + life * 0.65;
+  const hue =
+    state.hitMarker.tone === "alpha" || state.hitMarker.tone === "alpha_kill"
+      ? `rgba(255, 203, 141, ${alpha})`
+      : `rgba(242, 246, 255, ${alpha})`;
+
+  ctx.save();
+  ctx.strokeStyle = hue;
+  ctx.lineWidth = 2.4;
+  ctx.beginPath();
+  ctx.moveTo(w / 2 - spread, h / 2 - spread);
+  ctx.lineTo(w / 2 - inner, h / 2 - inner);
+  ctx.moveTo(w / 2 + spread, h / 2 - spread);
+  ctx.lineTo(w / 2 + inner, h / 2 - inner);
+  ctx.moveTo(w / 2 - spread, h / 2 + spread);
+  ctx.lineTo(w / 2 - inner, h / 2 + inner);
+  ctx.moveTo(w / 2 + spread, h / 2 + spread);
+  ctx.lineTo(w / 2 + inner, h / 2 + inner);
+  ctx.stroke();
+  ctx.restore();
 }
 
 function drawGroundPlane() {

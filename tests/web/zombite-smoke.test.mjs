@@ -74,6 +74,15 @@ test('app ignores known-schema payloads when values are invalid', () => {
   assert.match(appJs, /"Config rate limited": "Configuracion limitada por rafaga"/);
 });
 
+test('runtime includes recoil and hit-marker feedback for shooter feel', () => {
+  assert.match(appJs, /hitMarker:\s*\{\s*ttl:\s*0,\s*tone:\s*"normal"/);
+  assert.match(appJs, /weapon:\s*\{\s*recoil:\s*0/);
+  assert.match(appJs, /state\.weapon\.recoil = Math\.min\(1, state\.weapon\.recoil \+ 0\.9\)/);
+  assert.match(appJs, /triggerHitMarker\(z\.isAlpha \? "alpha" : "normal"\)/);
+  assert.match(appJs, /function drawHitMarker\(\)/);
+  assert.match(appJs, /drawHitMarker\(\);/);
+});
+
 test('keyboard controls cover primary actions', () => {
   assert.match(appJs, /if \(\(key === " " \|\| key === "spacebar"\) && state\.running && !state\.gameOver\)/);
   assert.match(appJs, /if \(key === "enter"\)/);

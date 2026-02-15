@@ -277,6 +277,30 @@ body {
   bottom: 1.8rem;
 }
 
+.action-stack {
+  position: absolute;
+  right: 1.1rem;
+  top: 44%;
+  transform: translateY(-50%);
+  z-index: 3;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.action-btn {
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 2px solid rgba(240, 247, 255, 0.45);
+  background: radial-gradient(circle at 30% 30%, rgba(162, 188, 240, 0.36), rgba(13, 20, 31, 0.85));
+  color: #f0f7ff;
+  font-size: 1.2rem;
+  font-weight: 700;
+  text-shadow: 0 0 8px rgba(151, 222, 255, 0.45);
+}
+
 .muzzle-flash {
   position: absolute;
   left: 50%;
@@ -389,6 +413,10 @@ button:disabled {
   .touch-ring {
     opacity: 0.9;
   }
+
+  .action-stack {
+    opacity: 0.95;
+  }
 }
 
 @media (max-width: 900px) {
@@ -412,6 +440,17 @@ button:disabled {
     right: 0.55rem;
     top: 0.55rem;
     min-width: 122px;
+  }
+
+  .action-stack {
+    right: 0.55rem;
+    top: 48%;
+  }
+
+  .action-btn {
+    width: 46px;
+    height: 46px;
+    font-size: 1rem;
   }
 
   .hint {
