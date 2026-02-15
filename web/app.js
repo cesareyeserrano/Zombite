@@ -134,6 +134,12 @@ const SCENE_PROFILE = {
 const INVALID_MESSAGE_WINDOW_MS = 1500;
 const INVALID_MESSAGE_LIMIT = 8;
 const INVALID_MESSAGE_COOLDOWN_MS = 4000;
+const HIT_STOP_PROFILE = {
+  normal: { drag: 0.74, curve: 1.24, baseMs: 20, spanMs: 24, powerScale: 0.9 },
+  alpha: { drag: 0.8, curve: 1.18, baseMs: 24, spanMs: 30, powerScale: 0.94 },
+  kill: { drag: 0.86, curve: 1.08, baseMs: 28, spanMs: 34, powerScale: 0.97 },
+  alpha_kill: { drag: 0.92, curve: 1.0, baseMs: 34, spanMs: 42, powerScale: 1 },
+};
 const IS_COARSE_POINTER = Boolean(window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
 
 const ui = {
@@ -226,7 +232,9 @@ const state = {
   },
   hitStop: {
     ttl: 0,
+    maxTtl: 0,
     intensity: 0,
+    mode: "none",
   },
   audio: {
     ctx: null,
@@ -600,7 +608,9 @@ function startGame() {
   state.damageFx.intensity = 0;
   state.damageFx.pulse = 0;
   state.hitStop.ttl = 0;
+  state.hitStop.maxTtl = 0;
   state.hitStop.intensity = 0;
+  state.hitStop.mode = "none";
   state.ammo = BASE_MAGAZINE;
   state.reloading = false;
   state.weapon.recoil = 0;
@@ -656,10 +666,15 @@ function update(dt) {
 
   let worldScale = 1;
   if (state.hitStop.ttl > 0) {
+    const profile = HIT_STOP_PROFILE[state.hitStop.mode] || HIT_STOP_PROFILE.normal;
+    const life = state.hitStop.maxTtl > 0 ? clamp(state.hitStop.ttl / state.hitStop.maxTtl, 0, 1) : 0;
+    const curveLife = Math.pow(life, profile.curve);
     state.hitStop.ttl = Math.max(0, state.hitStop.ttl - dt);
-    worldScale = 1 - 0.84 * state.hitStop.intensity;
+    worldScale = clamp(1 - profile.drag * state.hitStop.intensity * curveLife, 0.08, 1);
     if (state.hitStop.ttl === 0) {
+      state.hitStop.maxTtl = 0;
       state.hitStop.intensity = 0;
+      state.hitStop.mode = "none";
     }
   }
   const worldDt = dt * worldScale;
@@ -839,6 +854,8 @@ function shoot(point) {
   playShotSound();
   let hit = false;
   let hitStopStrength = 0;
+  let hitStopMode = "none";
+  let hitStopRank = 0;
 
   for (let i = state.zombies.length - 1; i >= 0; i -= 1) {
     const z = state.zombies[i];
@@ -849,12 +866,26 @@ function shoot(point) {
       z.hp -= 1;
       applyZombieImpactReaction(z, point);
       hit = true;
-      hitStopStrength = Math.max(hitStopStrength, z.isAlpha ? 0.56 : 0.42);
+      const impactStrength = z.isAlpha ? 0.56 : 0.42;
+      const impactMode = z.isAlpha ? "alpha" : "normal";
+      const impactRank = z.isAlpha ? 2 : 1;
+      if (impactStrength > hitStopStrength) hitStopStrength = impactStrength;
+      if (impactRank >= hitStopRank) {
+        hitStopMode = impactMode;
+        hitStopRank = impactRank;
+      }
       triggerHitMarker(z.isAlpha ? "alpha" : "normal");
       addImpact(point.x, point.y, z.isAlpha ? "#ffbdb0" : "#b7ffbf");
       playHitSound(z.isAlpha);
       if (z.hp <= 0) {
-        hitStopStrength = Math.max(hitStopStrength, z.isAlpha ? 1 : 0.78);
+        const killStrength = z.isAlpha ? 1 : 0.78;
+        const killMode = z.isAlpha ? "alpha_kill" : "kill";
+        const killRank = z.isAlpha ? 4 : 3;
+        if (killStrength > hitStopStrength) hitStopStrength = killStrength;
+        if (killRank >= hitStopRank) {
+          hitStopMode = killMode;
+          hitStopRank = killRank;
+        }
         triggerHitMarker(z.isAlpha ? "alpha_kill" : "kill");
         addBloodPool(z.x, z.y, z.isAlpha);
         playKillSound(z.isAlpha);
@@ -873,7 +904,7 @@ function shoot(point) {
     state.score = Math.max(0, state.score - 1);
   }
   if (hitStopStrength > 0) {
-    triggerHitStop(hitStopStrength);
+    triggerHitStop(hitStopStrength, hitStopMode);
   }
 
   if (state.ammo <= 0) queueReload();
@@ -1739,10 +1770,17 @@ function triggerDamageOverlay(amount) {
   state.damageFx.pulse = 0;
 }
 
-function triggerHitStop(strength = 0.5) {
+function triggerHitStop(strength = 0.5, mode = "normal") {
+  const profile = HIT_STOP_PROFILE[mode] || HIT_STOP_PROFILE.normal;
   const power = clamp(strength, 0.2, 1);
-  state.hitStop.ttl = Math.max(state.hitStop.ttl, 24 + power * 46);
-  state.hitStop.intensity = Math.max(state.hitStop.intensity, power);
+  const ttl = profile.baseMs + power * profile.spanMs;
+  if (ttl >= state.hitStop.ttl || state.hitStop.mode === "none") {
+    state.hitStop.mode = mode;
+    state.hitStop.maxTtl = ttl;
+  }
+  state.hitStop.ttl = Math.max(state.hitStop.ttl, ttl);
+  state.hitStop.maxTtl = Math.max(state.hitStop.maxTtl, state.hitStop.ttl);
+  state.hitStop.intensity = Math.max(state.hitStop.intensity, power * profile.powerScale);
 }
 
 function applyPlayerDamage(amount) {
