@@ -7,18 +7,18 @@ const SESSION_TARGET_MIN_MS = 3 * 60 * 1000;
 const SESSION_LIMIT_MS = 8 * 60 * 1000;
 const LEVEL_GOALS = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
 const ALPHA_LEVELS = new Set([4, 6, 8, 10]);
-const NIGHT_CITY_SCENE = {
-  name: "Night Street",
-  skyTop: "#05070b",
-  skyMid: "#111824",
-  groundTop: "#1a1d23",
-  groundBottom: "#0c0e12",
+const LAUNDROMAT_SCENE = {
+  name: "Laundromat",
+  skyTop: "#11121a",
+  skyMid: "#2a3a4a",
+  groundTop: "#2e2b25",
+  groundBottom: "#171615",
 };
 const THREAT_SCALE = ["Low", "Guarded", "Elevated", "High", "Critical", "Lethal"];
 const LEVEL_PACE = [1.0, 1.04, 1.08, 1.13, 1.18, 1.23, 1.28, 1.34, 1.4, 1.47];
 const LEVEL_HP_SCALE = [1.0, 1.0, 1.01, 1.03, 1.05, 1.07, 1.1, 1.13, 1.16, 1.2];
 const LEVEL_SCENES = [
-  NIGHT_CITY_SCENE,
+  LAUNDROMAT_SCENE,
   { name: "City", skyTop: "#0f1525", skyMid: "#1d2b3f", groundTop: "#1c1e26", groundBottom: "#121319" },
   { name: "Factory", skyTop: "#121018", skyMid: "#2b2320", groundTop: "#2a2624", groundBottom: "#1a1614" },
   { name: "Countryside", skyTop: "#0e1d26", skyMid: "#234238", groundTop: "#213429", groundBottom: "#131f19" },
@@ -30,7 +30,7 @@ const LEVEL_SCENES = [
   { name: "Airport", skyTop: "#101a26", skyMid: "#2f3f4f", groundTop: "#2a333c", groundBottom: "#1a2028" },
 ];
 const SCENE_PROFILE = {
-  "Night Street": {
+  Laundromat: {
     threat: THREAT_SCALE[0],
     speedBoost: 0.04,
     hpBoost: 0,
@@ -134,6 +134,7 @@ const SCENE_PROFILE = {
 const INVALID_MESSAGE_WINDOW_MS = 1500;
 const INVALID_MESSAGE_LIMIT = 8;
 const INVALID_MESSAGE_COOLDOWN_MS = 4000;
+const IS_COARSE_POINTER = Boolean(window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
 
 const ui = {
   canvas: document.getElementById("arena"),
@@ -174,7 +175,7 @@ const state = {
   nextSpawnMs: 0,
   zombies: [],
   pointer: { x: ui.canvas.width / 2, y: ui.canvas.height / 2 },
-  pointerVisible: false,
+  pointerVisible: !IS_COARSE_POINTER,
   lastTs: 0,
   waitingDecision: false,
   decisionMode: "none",
@@ -230,6 +231,7 @@ const allowedOrigins = buildAllowedOrigins(queryConfig.allowedOrigin);
 applyConfig(queryConfig);
 refreshHud();
 bootRuntime();
+initializeCrosshair();
 
 ui.startBtn.addEventListener("click", () => {
   if (!state.running || state.gameOver) {
@@ -263,23 +265,42 @@ ui.canvas.addEventListener("pointermove", (event) => {
   const point = canvasPoint(event);
   state.pointer.x = point.x;
   state.pointer.y = point.y;
+  if (!IS_COARSE_POINTER) {
+    state.pointerVisible = true;
+    ui.crosshair.classList.add("active");
+  }
   moveCrosshair(event);
 });
 
 ui.canvas.addEventListener("pointerenter", (event) => {
-  state.pointerVisible = true;
-  ui.crosshair.classList.add("active");
+  if (!IS_COARSE_POINTER) {
+    state.pointerVisible = true;
+    ui.crosshair.classList.add("active");
+  }
   moveCrosshair(event);
 });
 
 ui.canvas.addEventListener("pointerleave", () => {
   state.pointerVisible = false;
-  ui.crosshair.classList.remove("active");
+  if (!IS_COARSE_POINTER) {
+    snapCrosshairToCenter();
+  }
 });
 
 ui.canvas.addEventListener("click", (event) => {
+  if (!IS_COARSE_POINTER) {
+    state.pointerVisible = true;
+    ui.crosshair.classList.add("active");
+    moveCrosshair(event);
+  }
   if (!state.running || state.paused || state.gameOver) return;
   shoot(canvasPoint(event));
+});
+
+window.addEventListener("resize", () => {
+  if (!state.pointerVisible && !IS_COARSE_POINTER) {
+    snapCrosshairToCenter();
+  }
 });
 
 window.addEventListener("keydown", (event) => {
@@ -1043,24 +1064,60 @@ function drawWeaponFrame() {
   if (state.perf.quality === "low") return;
   const h = ui.canvas.height;
   const w = ui.canvas.width;
-  ctx.fillStyle = "rgba(8, 11, 15, 0.88)";
+  const pulse = 0.06 + Math.sin(performance.now() * 0.003) * 0.04;
+
+  ctx.save();
+
+  // Right-side receiver block.
+  ctx.fillStyle = "rgba(16, 22, 30, 0.94)";
   ctx.beginPath();
-  ctx.moveTo(0, h);
-  ctx.lineTo(w * 0.3, h);
-  ctx.lineTo(w * 0.45, h * 0.82);
-  ctx.lineTo(w * 0.62, h * 0.82);
-  ctx.lineTo(w * 0.77, h);
+  ctx.moveTo(w * 0.62, h);
+  ctx.lineTo(w * 0.73, h * 0.78);
+  ctx.lineTo(w * 0.94, h * 0.76);
+  ctx.lineTo(w, h * 0.85);
   ctx.lineTo(w, h);
   ctx.closePath();
   ctx.fill();
 
-  ctx.strokeStyle = "rgba(183, 204, 225, 0.22)";
-  ctx.lineWidth = 2;
+  // Weapon barrel and handguard.
+  ctx.fillStyle = "rgba(42, 50, 63, 0.95)";
+  ctx.fillRect(w * 0.66, h * 0.74, w * 0.28, h * 0.09);
+  ctx.fillStyle = "rgba(87, 100, 120, 0.8)";
+  ctx.fillRect(w * 0.72, h * 0.76, w * 0.2, h * 0.04);
+
+  // Sight ring.
+  ctx.strokeStyle = "rgba(200, 224, 255, 0.76)";
+  ctx.lineWidth = 4;
   ctx.beginPath();
-  ctx.moveTo(w * 0.33, h * 0.92);
-  ctx.lineTo(w * 0.5, h * 0.78);
-  ctx.lineTo(w * 0.68, h * 0.92);
+  ctx.arc(w * 0.79, h * 0.78, h * 0.032, 0, Math.PI * 2);
   ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(w * 0.79 - h * 0.014, h * 0.78);
+  ctx.lineTo(w * 0.79 + h * 0.014, h * 0.78);
+  ctx.moveTo(w * 0.79, h * 0.78 - h * 0.014);
+  ctx.lineTo(w * 0.79, h * 0.78 + h * 0.014);
+  ctx.stroke();
+
+  // Tactical accent stripes.
+  ctx.fillStyle = "rgba(255, 206, 111, 0.8)";
+  ctx.fillRect(w * 0.69, h * 0.81, w * 0.09, 3);
+  ctx.fillStyle = `rgba(111, 232, 255, ${0.25 + pulse})`;
+  ctx.fillRect(w * 0.86, h * 0.77, w * 0.06, 2);
+
+  // Player forearm silhouette.
+  ctx.fillStyle = "rgba(124, 93, 72, 0.85)";
+  ctx.beginPath();
+  ctx.moveTo(w * 0.58, h);
+  ctx.lineTo(w * 0.63, h * 0.9);
+  ctx.lineTo(w * 0.7, h * 0.88);
+  ctx.lineTo(w * 0.67, h);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.strokeStyle = "rgba(214, 232, 255, 0.18)";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(w * 0.66, h * 0.74, w * 0.28, h * 0.09);
+  ctx.restore();
 }
 
 function currentScene() {
@@ -1074,6 +1131,10 @@ function currentProfile() {
 }
 
 function drawSceneDetails(sceneName) {
+  if (sceneName === "Laundromat") {
+    drawLaundromatInterior();
+    return;
+  }
   if (sceneName === "City") {
     drawCityBlocks();
     return;
@@ -1115,6 +1176,64 @@ function drawSceneDetails(sceneName) {
     return;
   }
   drawSceneLabel(sceneName);
+}
+
+function drawLaundromatInterior() {
+  const h = ui.canvas.height;
+  const w = ui.canvas.width;
+
+  // Side walls and tunnel perspective.
+  ctx.fillStyle = "rgba(88, 79, 52, 0.55)";
+  ctx.beginPath();
+  ctx.moveTo(0, h * 0.52);
+  ctx.lineTo(w * 0.23, h * 0.54);
+  ctx.lineTo(w * 0.38, h * 0.72);
+  ctx.lineTo(0, h * 0.76);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(w, h * 0.52);
+  ctx.lineTo(w * 0.77, h * 0.54);
+  ctx.lineTo(w * 0.62, h * 0.72);
+  ctx.lineTo(w, h * 0.76);
+  ctx.closePath();
+  ctx.fill();
+
+  // Open door frames.
+  ctx.fillStyle = "rgba(60, 30, 24, 0.76)";
+  ctx.fillRect(w * 0.22, h * 0.44, 18, h * 0.3);
+  ctx.fillRect(w * 0.76, h * 0.44, 18, h * 0.3);
+  ctx.fillStyle = "rgba(212, 203, 183, 0.75)";
+  ctx.fillRect(w * 0.22 + 20, h * 0.46, w * 0.11, h * 0.26);
+  ctx.fillRect(w * 0.65, h * 0.46, w * 0.11, h * 0.26);
+
+  // Laundromat sign.
+  ctx.fillStyle = "rgba(227, 192, 88, 0.83)";
+  ctx.fillRect(w * 0.28, h * 0.18, w * 0.44, h * 0.12);
+  ctx.fillStyle = "rgba(192, 27, 27, 0.94)";
+  ctx.font = "700 52px Oswald";
+  ctx.textAlign = "center";
+  ctx.fillText("LAUNDROMAT", w * 0.5, h * 0.265);
+
+  // Warm center light.
+  const light = ctx.createRadialGradient(w * 0.5, h * 0.47, 20, w * 0.5, h * 0.56, h * 0.34);
+  light.addColorStop(0, "rgba(255, 244, 175, 0.6)");
+  light.addColorStop(0.55, "rgba(255, 149, 54, 0.35)");
+  light.addColorStop(1, "rgba(0, 0, 0, 0)");
+  ctx.fillStyle = light;
+  ctx.fillRect(0, 0, w, h);
+
+  // Washer blocks at left.
+  ctx.fillStyle = "rgba(123, 131, 136, 0.48)";
+  for (let i = 0; i < 3; i += 1) {
+    const x = 26 + i * 82;
+    ctx.fillRect(x, h * 0.63, 74, h * 0.17);
+    ctx.strokeStyle = "rgba(197, 215, 220, 0.4)";
+    ctx.strokeRect(x + 12, h * 0.67, 46, 46);
+  }
+
+  drawSceneLabel("Laundromat");
 }
 
 function drawCityBlocks() {
@@ -1294,6 +1413,25 @@ function canvasPoint(event) {
     x: ((event.clientX - rect.left) / rect.width) * ui.canvas.width,
     y: ((event.clientY - rect.top) / rect.height) * ui.canvas.height,
   };
+}
+
+function initializeCrosshair() {
+  if (IS_COARSE_POINTER) {
+    ui.crosshair.classList.remove("active");
+    return;
+  }
+  ui.crosshair.classList.add("active");
+  requestAnimationFrame(() => {
+    snapCrosshairToCenter();
+  });
+}
+
+function snapCrosshairToCenter() {
+  const rect = ui.canvas.getBoundingClientRect();
+  const x = rect.width * 0.5;
+  const y = rect.height * 0.5;
+  ui.crosshair.style.left = `${x}px`;
+  ui.crosshair.style.top = `${y}px`;
 }
 
 function moveCrosshair(event) {

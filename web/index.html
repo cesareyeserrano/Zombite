@@ -11,11 +11,16 @@
       <header class="hud">
         <div class="hud-left">
           <span id="levelLabel">Level 1/10</span>
-          <span id="sceneLabel">Scene City</span>
+          <span id="sceneLabel">Scene Laundromat</span>
           <span id="goalLabel">Goal 0/0</span>
         </div>
         <div class="hud-center">
           <span id="statusLabel">Press Start</span>
+          <div class="mission-banner" aria-label="Current objective">
+            <span class="mission-tag">OBJ</span>
+            <span id="missionText">Drain toxins using the laundromat vents</span>
+            <span class="mission-time">21m</span>
+          </div>
         </div>
         <div class="hud-right">
           <span id="sessionLabel">Time 08:00</span>
@@ -27,10 +32,16 @@
 
       <section class="arena-wrap">
         <canvas id="arena" width="1280" height="720" aria-label="Game arena"></canvas>
+        <div class="weapon-card" aria-hidden="true">
+          <span class="weapon-name">MPSK</span>
+          <span class="weapon-gauge"></span>
+        </div>
         <div id="crosshair" class="crosshair" aria-hidden="true">
           <span class="ring-x"></span>
           <span class="ring-y"></span>
         </div>
+        <div class="touch-ring touch-ring-left" aria-hidden="true"></div>
+        <div class="touch-ring touch-ring-right" aria-hidden="true"></div>
         <div id="muzzleFlash" class="muzzle-flash" aria-hidden="true"></div>
         <div id="outcomePanel" class="outcome-panel hidden" role="dialog" aria-live="polite">
           <h2 id="outcomeTitle">Level Complete</h2>
