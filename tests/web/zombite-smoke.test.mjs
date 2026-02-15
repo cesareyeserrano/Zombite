@@ -8,6 +8,15 @@ const embedHtml = readFileSync(new URL('../../web/embed-example.html', import.me
 const appJs = readFileSync(new URL('../../web/app.js', import.meta.url), 'utf8');
 const readme = readFileSync(new URL('../../web/README.md', import.meta.url), 'utf8');
 
+function parseNumberList(regex, label) {
+  const match = appJs.match(regex);
+  assert.ok(match, `${label} is missing`);
+  return match[1]
+    .split(',')
+    .map((value) => Number(value.trim()))
+    .filter(Number.isFinite);
+}
+
 test('index wires game script and session HUD label', () => {
   assert.match(indexHtml, /id="sessionLabel">Time 08:00</);
   assert.match(indexHtml, /<script src="\.\/app\.js"><\/script>/);
@@ -102,6 +111,28 @@ test('pacing model keeps progression gradual and level 10 reachable for medium s
   const level10Ms = estimateLevelMs(10, 'normal');
   assert.ok(level10Ms >= 45 * 1000, `level 10 too easy for medium skill: ${level10Ms}`);
   assert.ok(level10Ms <= 95 * 1000, `level 10 not reachable for medium skill: ${level10Ms}`);
+});
+
+test('alpha encounters are distinct, tougher, and progression-safe', () => {
+  assert.match(appJs, /const ALPHA_LEVELS\s*=\s*new Set\(\[4, 6, 8, 10\]\)/);
+  assert.match(appJs, /const firstAlphaThisLevel\s*=\s*isAlpha && !state\.alphaSpawnedInLevel/);
+  assert.match(appJs, /setStatus\(statusText\("Alpha spotted"\)\)/);
+  assert.match(appJs, /ctx\.fillText\("ALPHA", 0, torsoTop - headRadius \* 2\.1\)/);
+  assert.match(appJs, /const baseHp = isAlpha \? 3 \+ Math\.floor\(state\.level \/ 3\) : 1 \+ Math\.floor\(state\.level \/ 4\)/);
+  assert.match(appJs, /state\.score \+= z\.isAlpha \? 55 : 10/);
+  assert.match(appJs, /if \(state\.killsInLevel >= state\.goalInLevel\) {\s*onLevelComplete\(\);\s*break;\s*}/);
+
+  const levelGoals = parseNumberList(/const LEVEL_GOALS = \[([^\]]+)\]/, 'LEVEL_GOALS');
+  const alphaLevels = parseNumberList(/const ALPHA_LEVELS = new Set\(\[([^\]]+)\]\)/, 'ALPHA_LEVELS');
+
+  const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+  const alphaSpawnAtSpawnCount = (level) => clamp(7 - Math.floor(level / 2), 2, 5);
+
+  for (const level of alphaLevels) {
+    const goal = levelGoals[level - 1];
+    const forcedSpawnAt = alphaSpawnAtSpawnCount(level);
+    assert.ok(forcedSpawnAt < goal, `alpha event can be skipped at level ${level}: spawnAt=${forcedSpawnAt}, goal=${goal}`);
+  }
 });
 
 test('scene and profile tables are defined for runtime HUD and visuals', () => {

@@ -597,6 +597,7 @@ function spawnZombie() {
   const forceAlpha = alphaLevelGate && !state.alphaSpawnedInLevel && state.spawnsInLevel >= alphaSpawnAtSpawnCount(state.level);
   const alphaRoll = alphaLevelGate && Math.random() < 0.03 + levelBias * 0.11;
   const isAlpha = forceAlpha || (alphaLevelGate && alphaRoll);
+  const firstAlphaThisLevel = isAlpha && !state.alphaSpawnedInLevel;
   const baseHp = isAlpha ? 3 + Math.floor(state.level / 3) : 1 + Math.floor(state.level / 4);
   const scaledHp = Math.max(1, Math.round(baseHp * hpScale));
 
@@ -615,6 +616,9 @@ function spawnZombie() {
   state.zombies.push(z);
   state.spawnsInLevel += 1;
   if (isAlpha) state.alphaSpawnedInLevel = true;
+  if (firstAlphaThisLevel) {
+    setStatus(statusText("Alpha spotted"));
+  }
 
   const maxOnScreen = 5 + Math.floor(state.level / 2) - (state.perf.quality === "low" ? 2 : 0);
   if (state.zombies.length > maxOnScreen) state.zombies.shift();
@@ -829,6 +833,7 @@ function statusText(source) {
       Continue: "Continuar",
       "Level complete - choose next action": "Nivel completado - elige accion",
       "Level failed": "Nivel fallado",
+      "Alpha spotted": "Alfa detectado",
       "You can retry this level or restart the run.": "Puedes reintentar este nivel o reiniciar la partida.",
       "Retry level": "Reintentar nivel",
       "Loading assets": "Cargando recursos",
@@ -997,6 +1002,10 @@ function drawZombie(z) {
     ctx.beginPath();
     ctx.ellipse(0, hipY * 0.2, shoulder * 1.8, bodyHeight * 0.62, 0, 0, Math.PI * 2);
     ctx.stroke();
+    ctx.fillStyle = "rgba(255, 225, 193, 0.95)";
+    ctx.font = `${Math.max(10, 11 * scale)}px Oswald`;
+    ctx.textAlign = "center";
+    ctx.fillText("ALPHA", 0, torsoTop - headRadius * 2.1);
   }
   ctx.restore();
 }
