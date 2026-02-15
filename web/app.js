@@ -146,10 +146,13 @@ const ui = {
   threatLabel: document.getElementById("threatLabel"),
   ammoLabel: document.getElementById("ammoLabel"),
   healthLabel: document.getElementById("healthLabel"),
+  cashLabel: document.getElementById("cashLabel"),
+  missionTime: document.getElementById("missionTime"),
   crosshair: document.getElementById("crosshair"),
   startBtn: document.getElementById("startBtn"),
   reloadBtn: document.getElementById("reloadBtn"),
   pauseBtn: document.getElementById("pauseBtn"),
+  fireBtn: document.getElementById("fireBtn"),
   muzzleFlash: document.getElementById("muzzleFlash"),
   outcomePanel: document.getElementById("outcomePanel"),
   outcomeTitle: document.getElementById("outcomeTitle"),
@@ -244,6 +247,7 @@ applyConfig(queryConfig);
 refreshHud();
 bootRuntime();
 initializeCrosshair();
+syncCrosshairOverlay();
 
 ui.startBtn.addEventListener("click", () => {
   if (!state.running || state.gameOver) {
@@ -275,8 +279,10 @@ ui.restartBtn.addEventListener("click", () => {
 
 ui.canvas.addEventListener("pointermove", (event) => {
   const point = canvasPoint(event);
-  state.pointer.x = point.x;
-  state.pointer.y = point.y;
+  if (!IS_COARSE_POINTER) {
+    state.pointer.x = point.x;
+    state.pointer.y = point.y;
+  }
   if (!IS_COARSE_POINTER) {
     state.pointerVisible = true;
     ui.crosshair.classList.add("active");
@@ -293,12 +299,16 @@ ui.canvas.addEventListener("pointerenter", (event) => {
 });
 
 ui.canvas.addEventListener("pointerleave", () => {
+  if (IS_COARSE_POINTER) {
+    snapCrosshairToCenter();
+    syncCrosshairOverlay();
+    return;
+  }
   state.pointerVisible = false;
   state.weapon.swayTargetX = 0;
   state.weapon.swayTargetY = 0;
-  if (!IS_COARSE_POINTER) {
-    snapCrosshairToCenter();
-  }
+  snapCrosshairToCenter();
+  syncCrosshairOverlay();
 });
 
 ui.canvas.addEventListener("click", (event) => {
@@ -308,11 +318,26 @@ ui.canvas.addEventListener("click", (event) => {
     moveCrosshair(event);
   }
   if (!state.running || state.paused || state.gameOver) return;
-  shoot(canvasPoint(event));
+  const point = IS_COARSE_POINTER
+    ? { x: ui.canvas.width / 2, y: ui.canvas.height / 2 }
+    : canvasPoint(event);
+  shoot(point);
 });
 
+if (ui.fireBtn) {
+  ui.fireBtn.addEventListener("click", (event) => {
+    event.preventDefault();
+    shootFromKeyboard();
+  });
+}
+
 window.addEventListener("resize", () => {
-  if (!state.pointerVisible && !IS_COARSE_POINTER) {
+  if (IS_COARSE_POINTER) {
+    snapCrosshairToCenter();
+    syncCrosshairOverlay();
+    return;
+  }
+  if (!state.pointerVisible) {
     snapCrosshairToCenter();
   }
 });
@@ -570,6 +595,11 @@ function startGame() {
   state.weapon.swayTargetX = 0;
   state.weapon.swayTargetY = 0;
   state.weapon.shotLightTtl = 0;
+  if (IS_COARSE_POINTER) {
+    state.pointerVisible = false;
+    snapCrosshairToCenter();
+  }
+  syncCrosshairOverlay();
   hideOutcome();
   beginLevel();
   state.lastTs = performance.now();
@@ -658,6 +688,7 @@ function update(dt) {
   const swayLerp = Math.min(1, dt * 0.012);
   state.weapon.swayX += (state.weapon.swayTargetX - state.weapon.swayX) * swayLerp;
   state.weapon.swayY += (state.weapon.swayTargetY - state.weapon.swayY) * swayLerp;
+  syncCrosshairOverlay();
 
   if (state.camera.shakeMs > 0) {
     state.camera.shakeMs = Math.max(0, state.camera.shakeMs - dt);
@@ -795,9 +826,9 @@ function shoot(point) {
 
 function shootFromKeyboard() {
   if (!state.running || state.paused || state.gameOver || state.waitingDecision) return;
-  const point = state.pointerVisible
-    ? { x: state.pointer.x, y: state.pointer.y }
-    : { x: ui.canvas.width / 2, y: ui.canvas.height / 2 };
+  const point = IS_COARSE_POINTER || !state.pointerVisible
+    ? { x: ui.canvas.width / 2, y: ui.canvas.height / 2 }
+    : { x: state.pointer.x, y: state.pointer.y };
   shoot(point);
 }
 
@@ -875,17 +906,23 @@ function togglePause() {
 function refreshHud() {
   const scene = currentScene();
   const profile = currentProfile();
+  const remainingMs = Math.max(0, state.session.limitMs - state.session.elapsedMs);
   ui.levelLabel.textContent = `Level ${state.level}/${MAX_LEVEL}`;
   ui.sceneLabel.textContent = `Scene ${scene.name}`;
   ui.goalLabel.textContent = `Goal ${state.killsInLevel}/${state.goalInLevel}`;
   if (ui.sessionLabel) {
-    const remainingMs = Math.max(0, state.session.limitMs - state.session.elapsedMs);
     ui.sessionLabel.textContent = `Time ${formatClock(remainingMs)}`;
+  }
+  if (ui.missionTime) {
+    ui.missionTime.textContent = `${Math.max(1, Math.ceil(remainingMs / 60000))}m`;
   }
   const alphaSuffix = levelHasAlpha(state.level) ? " +Alpha" : "";
   ui.threatLabel.textContent = `Threat ${profile.threat}${alphaSuffix}`;
   ui.ammoLabel.textContent = state.reloading ? "Ammo reloading..." : `Ammo ${state.ammo}/${BASE_MAGAZINE}`;
   ui.healthLabel.textContent = `Health ${Math.max(0, Math.round(state.health))}`;
+  if (ui.cashLabel) {
+    ui.cashLabel.textContent = `$ ${Math.max(0, Math.round(state.score))}`;
+  }
 }
 
 function formatClock(ms) {
@@ -1111,65 +1148,91 @@ function drawWeaponFrame() {
   if (state.perf.quality === "low") return;
   const h = ui.canvas.height;
   const w = ui.canvas.width;
-  const pulse = 0.06 + Math.sin(performance.now() * 0.003) * 0.04;
+  const pulse = 0.06 + Math.sin(performance.now() * 0.0032) * 0.04;
   const recoil = state.weapon.recoil;
   const swayX = state.weapon.swayX;
   const swayY = state.weapon.swayY;
-  const bob = Math.sin(performance.now() * 0.004) * 0.005;
+  const bob = Math.sin(performance.now() * 0.0045) * 0.005;
 
   ctx.save();
-  ctx.translate(w * (recoil * 0.018 + swayX * 0.02), h * (recoil * 0.012 + swayY * 0.02 + bob));
-  ctx.rotate(-recoil * 0.045 + swayX * 0.022);
+  ctx.translate(w * (recoil * 0.022 + swayX * 0.025), h * (recoil * 0.016 + swayY * 0.022 + bob));
+  ctx.rotate(-recoil * 0.056 + swayX * 0.03);
 
-  // Right-side receiver block.
-  ctx.fillStyle = "rgba(16, 22, 30, 0.94)";
+  // Drop shadow under the weapon.
+  ctx.fillStyle = "rgba(0, 0, 0, 0.32)";
   ctx.beginPath();
-  ctx.moveTo(w * 0.62, h);
-  ctx.lineTo(w * 0.73, h * 0.78);
-  ctx.lineTo(w * 0.94, h * 0.76);
-  ctx.lineTo(w, h * 0.85);
+  ctx.moveTo(w * 0.59, h * 0.98);
+  ctx.lineTo(w * 0.82, h * 0.83);
+  ctx.lineTo(w, h * 0.87);
+  ctx.lineTo(w, h);
+  ctx.lineTo(w * 0.62, h);
+  ctx.closePath();
+  ctx.fill();
+
+  // Receiver + rear block.
+  ctx.fillStyle = "rgba(14, 20, 28, 0.95)";
+  ctx.beginPath();
+  ctx.moveTo(w * 0.61, h);
+  ctx.lineTo(w * 0.72, h * 0.74);
+  ctx.lineTo(w * 0.95, h * 0.7);
+  ctx.lineTo(w, h * 0.82);
   ctx.lineTo(w, h);
   ctx.closePath();
   ctx.fill();
 
-  // Weapon barrel and handguard.
-  ctx.fillStyle = "rgba(42, 50, 63, 0.95)";
-  ctx.fillRect(w * 0.66, h * 0.74, w * 0.28, h * 0.09);
-  ctx.fillStyle = "rgba(87, 100, 120, 0.8)";
-  ctx.fillRect(w * 0.72, h * 0.76, w * 0.2, h * 0.04);
+  // Main body and barrel sleeve.
+  ctx.fillStyle = "rgba(34, 44, 58, 0.97)";
+  ctx.fillRect(w * 0.64, h * 0.67, w * 0.34, h * 0.1);
+  ctx.fillStyle = "rgba(86, 102, 123, 0.86)";
+  ctx.fillRect(w * 0.69, h * 0.695, w * 0.22, h * 0.043);
 
-  // Sight ring.
-  ctx.strokeStyle = "rgba(200, 224, 255, 0.76)";
-  ctx.lineWidth = 4;
+  // Barrel tube (front right).
+  const tube = ctx.createLinearGradient(w * 0.86, h * 0.68, w, h * 0.76);
+  tube.addColorStop(0, "rgba(126, 141, 162, 0.92)");
+  tube.addColorStop(0.5, "rgba(54, 67, 84, 0.95)");
+  tube.addColorStop(1, "rgba(17, 24, 35, 0.96)");
+  ctx.fillStyle = tube;
   ctx.beginPath();
-  ctx.arc(w * 0.79, h * 0.78, h * 0.032, 0, Math.PI * 2);
+  ctx.ellipse(w * 0.965, h * 0.72, w * 0.07, h * 0.085, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "rgba(10, 15, 22, 0.92)";
+  ctx.beginPath();
+  ctx.ellipse(w * 0.97, h * 0.72, w * 0.028, h * 0.037, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Sight ring and reticle on weapon.
+  ctx.strokeStyle = "rgba(209, 228, 255, 0.79)";
+  ctx.lineWidth = 4.2;
+  ctx.beginPath();
+  ctx.arc(w * 0.79, h * 0.72, h * 0.035, 0, Math.PI * 2);
   ctx.stroke();
   ctx.beginPath();
-  ctx.moveTo(w * 0.79 - h * 0.014, h * 0.78);
-  ctx.lineTo(w * 0.79 + h * 0.014, h * 0.78);
-  ctx.moveTo(w * 0.79, h * 0.78 - h * 0.014);
-  ctx.lineTo(w * 0.79, h * 0.78 + h * 0.014);
+  ctx.moveTo(w * 0.79 - h * 0.014, h * 0.72);
+  ctx.lineTo(w * 0.79 + h * 0.014, h * 0.72);
+  ctx.moveTo(w * 0.79, h * 0.72 - h * 0.014);
+  ctx.lineTo(w * 0.79, h * 0.72 + h * 0.014);
   ctx.stroke();
 
-  // Tactical accent stripes.
+  // Tactical stripes and readout lights.
   ctx.fillStyle = "rgba(255, 206, 111, 0.8)";
-  ctx.fillRect(w * 0.69, h * 0.81, w * 0.09, 3);
+  ctx.fillRect(w * 0.67, h * 0.76, w * 0.1, 3);
+  ctx.fillRect(w * 0.67, h * 0.772, w * 0.066, 2);
   ctx.fillStyle = `rgba(111, 232, 255, ${0.25 + pulse})`;
-  ctx.fillRect(w * 0.86, h * 0.77, w * 0.06, 2);
+  ctx.fillRect(w * 0.84, h * 0.705, w * 0.07, 2);
 
   // Player forearm silhouette.
   ctx.fillStyle = "rgba(124, 93, 72, 0.85)";
   ctx.beginPath();
-  ctx.moveTo(w * 0.58, h);
-  ctx.lineTo(w * 0.63, h * 0.9);
-  ctx.lineTo(w * 0.7, h * 0.88);
-  ctx.lineTo(w * 0.67, h);
+  ctx.moveTo(w * 0.56, h);
+  ctx.lineTo(w * 0.62, h * 0.87);
+  ctx.lineTo(w * 0.7, h * 0.84);
+  ctx.lineTo(w * 0.69, h);
   ctx.closePath();
   ctx.fill();
 
-  ctx.strokeStyle = "rgba(214, 232, 255, 0.18)";
-  ctx.lineWidth = 2;
-  ctx.strokeRect(w * 0.66, h * 0.74, w * 0.28, h * 0.09);
+  ctx.strokeStyle = "rgba(214, 232, 255, 0.24)";
+  ctx.lineWidth = 2.2;
+  ctx.strokeRect(w * 0.64, h * 0.67, w * 0.34, h * 0.1);
   ctx.restore();
 }
 
@@ -1470,12 +1533,17 @@ function canvasPoint(event) {
 
 function initializeCrosshair() {
   if (IS_COARSE_POINTER) {
-    ui.crosshair.classList.remove("active");
+    ui.crosshair.classList.add("active");
+    requestAnimationFrame(() => {
+      snapCrosshairToCenter();
+      syncCrosshairOverlay();
+    });
     return;
   }
   ui.crosshair.classList.add("active");
   requestAnimationFrame(() => {
     snapCrosshairToCenter();
+    syncCrosshairOverlay();
   });
 }
 
@@ -1483,6 +1551,8 @@ function snapCrosshairToCenter() {
   const rect = ui.canvas.getBoundingClientRect();
   const x = rect.width * 0.5;
   const y = rect.height * 0.5;
+  state.pointer.x = ui.canvas.width * 0.5;
+  state.pointer.y = ui.canvas.height * 0.5;
   state.weapon.swayTargetX = 0;
   state.weapon.swayTargetY = 0;
   ui.crosshair.style.left = `${x}px`;
@@ -1490,6 +1560,9 @@ function snapCrosshairToCenter() {
 }
 
 function moveCrosshair(event) {
+  if (IS_COARSE_POINTER) {
+    return;
+  }
   const rect = ui.canvas.getBoundingClientRect();
   const x = event.clientX - rect.left;
   const y = event.clientY - rect.top;
@@ -1501,10 +1574,27 @@ function moveCrosshair(event) {
   ui.crosshair.style.top = `${y}px`;
 }
 
+function syncCrosshairOverlay() {
+  const spread = 8 + state.weapon.recoil * 14;
+  ui.crosshair.style.setProperty("--spread", `${spread.toFixed(2)}px`);
+  ui.crosshair.classList.toggle("hit", state.hitMarker.ttl > 0);
+  if (IS_COARSE_POINTER) {
+    const rect = ui.canvas.getBoundingClientRect();
+    ui.crosshair.style.left = `${rect.width * 0.5}px`;
+    ui.crosshair.style.top = `${rect.height * 0.5}px`;
+  }
+}
+
 function flashMuzzle() {
   ui.muzzleFlash.classList.remove("active");
   void ui.muzzleFlash.offsetWidth;
   ui.muzzleFlash.classList.add("active");
+  ui.crosshair.classList.remove("shot");
+  void ui.crosshair.offsetWidth;
+  ui.crosshair.classList.add("shot");
+  setTimeout(() => {
+    ui.crosshair.classList.remove("shot");
+  }, 90);
 }
 
 function clamp(value, min, max) {

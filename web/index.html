@@ -10,23 +10,25 @@
     <main class="game-shell">
       <header class="hud">
         <div class="hud-left">
-          <span id="levelLabel">Level 1/10</span>
-          <span id="sceneLabel">Scene Laundromat</span>
-          <span id="goalLabel">Goal 0/0</span>
+          <span class="hud-icon" aria-hidden="true">II</span>
+          <span id="healthLabel" class="hud-pill hud-health">Health 100</span>
+          <span id="cashLabel" class="hud-pill hud-cash">$ 0</span>
         </div>
         <div class="hud-center">
           <span id="statusLabel">Press Start</span>
           <div class="mission-banner" aria-label="Current objective">
             <span class="mission-tag">OBJ</span>
             <span id="missionText">Drain toxins using the laundromat vents</span>
-            <span class="mission-time">21m</span>
+            <span id="missionTime" class="mission-time">21m</span>
           </div>
         </div>
         <div class="hud-right">
+          <span id="levelLabel">Level 1/10</span>
+          <span id="sceneLabel">Scene Laundromat</span>
+          <span id="goalLabel">Goal 0/0</span>
           <span id="sessionLabel">Time 08:00</span>
           <span id="threatLabel">Threat Low</span>
           <span id="ammoLabel">Ammo 5/5</span>
-          <span id="healthLabel">Health 100</span>
         </div>
       </header>
 
@@ -47,6 +49,7 @@
           <span class="action-btn">⟲</span>
           <span class="action-btn">✦</span>
         </div>
+        <button id="fireBtn" class="fire-btn" type="button" aria-label="Fire weapon">⊕</button>
         <div id="muzzleFlash" class="muzzle-flash" aria-hidden="true"></div>
         <div id="outcomePanel" class="outcome-panel hidden" role="dialog" aria-live="polite">
           <h2 id="outcomeTitle">Level Complete</h2>
