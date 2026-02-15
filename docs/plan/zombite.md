@@ -2,146 +2,181 @@
 
 STATUS: DRAFT
 
-## 1. Intent
-Entregar un mini juego web de zombies para sesiones cortas (3-8 minutos), con 10 niveles de dificultad progresiva y capacidad de embedding seguro via iframe/widget.
+## 1. Intent (from approved spec)
+- Retrieval mode: section-level
 
+### Context snapshot
+- Quiero construir un mini juego web instalable como iframe o widget en otras páginas.
+- Primary actor: jugador casual
+- Expected outcome: Que el jugador disfrute sesiones cortas de 3 a 8 minutos, complete niveles con dificultad progresiva y pueda incrustar el juego fácilmente en cualquier sitio mediante iframe/widget.
+
+### Actors snapshot
+- Jugador casual (actor primario): juega sesiones cortas y busca entretenimiento ligero.
+- Sitio anfitrion: integra el juego como iframe/widget y envia configuracion controlada.
+
+### Functional rules snapshot
+- El juego debe permitir completar una partida en sesiones cortas de 3 a 8 minutos con bucle jugable inmediato (iniciar, apuntar, disparar, pasar de nivel o reiniciar).
+- El juego debe incluir 10 niveles con dificultad progresiva (velocidad/cantidad de zombies y precision requerida) sin saltos bruscos imposibles.
+- En niveles definidos deben aparecer zombies alfa con mayor resistencia y patron de movimiento diferenciado respecto a zombies normales.
+- El juego debe poder incrustarse como iframe/widget y aceptar configuracion basica validada (por ejemplo idioma, volumen, dificultad inicial).
+
+### Acceptance criteria snapshot
+- Given un jugador casual, when inicia una partida, then entra en gameplay en pocos segundos y puede jugar una sesion corta completa.
+- Given una partida en progreso, when avanza del nivel 1 al 10, then la dificultad aumenta gradualmente y se percibe retadora pero razonable.
+- Given un nivel con zombie alfa, when el jugador lo enfrenta, then el alfa requiere mayor esfuerzo que un zombie normal y su derrota permite continuar.
+- Given un sitio externo integra el juego via iframe/widget, when envia configuracion valida, then el juego aplica la configuracion y rechaza entradas invalidas sin romper la sesion.
+
+### Security snapshot
+- Validar origen (`origin`) y esquema de mensajes `postMessage` cuando se use como iframe/widget, y sanitizar cualquier dato de configuración recibido para evitar inyección o manipulación del estado del juego.
+
+### Out-of-scope snapshot
+- Modo multijugador en tiempo real.
+- Economia in-game, tienda o microtransacciones.
+- Registro de usuarios o ranking global persistente.
+
+### Retrieval metadata
+- Retrieval mode: semantic-lite
+- Retrieved sections: 1. Context, 2. Actors, 7. Security Considerations, 8. Out of Scope
+- Summary:
+-
 - Success looks like:
-- Inicio de juego en menos de 5 segundos en red domestica.
-- Progresion 1-10 percibida como desafiante y justa.
-- Integracion estable del widget con inputs validos e invalidos.
+-
 
-## 2. Scope
-### In scope
-- Core loop inmediato: iniciar, apuntar/disparar, finalizar nivel o reiniciar.
-- Sistema de niveles progresivos (1-10).
-- Eventos de zombie alfa en niveles definidos.
-- Embedding y configuracion basica validada (`idioma`, `volumen`, `dificultadInicial`).
-
-### Out of scope
-- Multiplayer en tiempo real.
-- Tienda, economia o microtransacciones.
-- Cuentas persistentes y ranking global.
-
-## 3. Discovery Review (Discovery Persona)
+## 2. Discovery Review (Discovery Persona)
 ### Problem framing
-El valor principal es reducir friccion: juego rapido para usuario final e integracion sencilla para terceros.
+- Problem stated in approved spec context
+- Core rule to preserve: El juego debe permitir completar una partida en sesiones cortas de 3 a 8 minutos con bucle jugable inmediato (iniciar, apuntar, disparar, pasar de nivel o reiniciar).
 
 ### Constraints and dependencies
-- Rendimiento constante en hardware promedio.
-- Assets optimizados para carga inicial corta.
-- Contrato de mensajes y configuracion seguro para embedding.
+- Constraints: Constraints to be refined during planning
+- Dependencies: Dependencies to be refined during planning
 
 ### Success metrics
-- Tiempo a primer gameplay.
-- Sesiones completadas de 3-8 minutos.
-- Tasa de errores de configuracion/embedding.
+- Baseline and target to be confirmed in product review
 
 ### Key assumptions
-- Los jugadores prefieren una curva de dificultad incremental y legible.
-- La configuracion basica del widget cubre los casos de uso iniciales.
+- Assumptions pending explicit validation
+
+### Discovery rigor profile
+- Discovery interview mode: quick
+- Planning policy: Plan a constrained first slice and keep assumptions explicit.
+- Follow-up gate: Before broad implementation, re-run discovery in standard/deep mode if assumptions remain unresolved.
+
+## 3. Scope
+### In scope
+-
+
+### Out of scope
+-
 
 ## 4. Product Review (Product Persona)
 ### Business value
-Permite distribuir el juego en propiedades web propias y de terceros, ampliando alcance y retencion sin instalacion.
+- Address user pain by enforcing: El juego debe permitir completar una partida en sesiones cortas de 3 a 8 minutos con bucle jugable inmediato (iniciar, apuntar, disparar, pasar de nivel o reiniciar).
+- Secondary value from supporting rule: El juego debe incluir 10 niveles con dificultad progresiva (velocidad/cantidad de zombies y precision requerida) sin saltos bruscos imposibles.
 
 ### Success metric
-- `P95` de tiempo de carga a gameplay < 5s.
-- Al menos una sesion completa por usuario activo en pruebas internas.
+- Primary KPI: Baseline and target to be confirmed in product review
+- Ship only if metric has baseline and target.
 
 ### Assumptions to validate
-- Dificultad del nivel 10 es exigente pero alcanzable.
-- La aparicion de zombies alfa incrementa emocion sin frustracion.
-- Los hosts necesitan solo configuracion basica al inicio.
+- Assumptions pending explicit validation
+- Validate dependency and constraint impact before implementation start.
+- Discovery rigor policy: Before broad implementation, re-run discovery in standard/deep mode if assumptions remain unresolved.
 
 ## 5. Architecture (Architect Persona)
 ### Components
-- `GameEngine`: loop principal y estado de partida.
-- `LevelManager`: progresion y parametros por nivel.
-- `EnemySystem`: zombies normales y alfa.
-- `EmbedAdapter`: inicializacion en iframe/widget y puente de mensajes.
-- `ConfigValidator`: parser y sanitizacion de configuracion.
+- Client or entry interface for zombite.
+- Application service implementing FR traceability.
+- Persistence/integration boundary for state and external dependencies.
 
 ### Data flow
-Host -> `EmbedAdapter` -> `ConfigValidator` -> `GameEngine` -> `LevelManager`/`EnemySystem` -> HUD/resultado.
+- Request enters through interface layer.
+- Application service validates input, enforces rules, and coordinates dependencies.
+- Results are persisted and returned with deterministic error handling.
 
 ### Key decisions
-- Aplicar defaults seguros ante configuracion invalida.
-- Definir progresion de dificultad por tabla de parametros.
-- Separar logica de embedding del loop de juego para aislamiento.
+- Preserve spec traceability from FR/AC to backlog/tests.
+- Keep interfaces explicit to reduce hidden coupling.
+- Prefer observable failure modes over silent degradation.
 
 ### Risks & mitigations
-- Riesgo: caida de FPS en niveles avanzados.
-  Mitigacion: limite de entidades y degradacion visual controlada.
-- Riesgo: estado inconsistente al terminar nivel con alfa.
-  Mitigacion: maquina de estados explicita para victoria/derrota/transicion.
-- Riesgo: inyeccion via mensajes externos.
-  Mitigacion: allowlist de origen y validacion estricta de esquema.
+- Dependency instability risk: add timeouts/retries and fallback behavior.
+- Constraint mismatch risk: validate assumptions before rollout.
+- Scope drift risk: block changes outside approved spec.
 
 ### Observability (logs/metrics/tracing)
-- Logs de arranque y validacion de config.
-- Metricas de FPS promedio y caidas por nivel.
-- Conteo de rechazos de mensajes externos por motivo.
-- Estado: resuelto para MVP.
-- Implementacion actual:
-  - `console.info`/`console.warn` en canal embed para `accepted` y `rejected` con motivo.
-  - Muestreo de FPS con degradacion/recuperacion de calidad en runtime.
-  - HUD con etiquetas de nivel/amenaza/tiempo para inspeccion visual de progresion.
+- Logs: authentication and error events with correlation IDs.
+- Metrics: success rate, latency, and failure-rate by endpoint/use case.
+- Tracing: end-to-end request trace across internal and external calls.
 
 ## 6. Security (Security Persona)
 ### Threats
-- Mensajes `postMessage` desde origen no confiable.
-- Payloads con tipos o campos maliciosos.
-- Intentos de forzar estado de juego via config.
+-
 
 ### Required controls
-- Allowlist de `origin` para comunicacion.
-- Validacion de esquema y tipos en mensajes/config.
-- Defaults seguros y rechazo silencioso de campos no soportados.
+-
 
 ### Validation rules
-- `idioma`: solo lista permitida.
-- `volumen`: rango numerico acotado.
-- `dificultadInicial`: valores permitidos o fallback a default.
+-
 
-### Abuse prevention
-- Ignorar rafagas de mensajes no validos y registrar eventos de rechazo.
+### Abuse prevention / rate limiting (if applicable)
+-
 
-## 7. UX/UI Review (UX/UI Persona)
+## 7. UX/UI Review (UX/UI Persona, if user-facing)
 ### Primary user flow
-Pantalla inicial corta -> inicio inmediato -> juego por nivel -> feedback de victoria/derrota -> continuar o reiniciar.
+-
 
-### Key states
-- Loading: indicador breve de carga.
-- Active play: HUD legible, mira visible, feedback de impacto.
-- Success/fail: resultado claro con CTA de siguiente paso.
-- Error/fallback: mensaje accionable cuando faltan assets o config invalida.
+### Key states (empty/loading/error/success)
+-
 
 ### Accessibility baseline
-- Contraste suficiente de HUD.
-- Indicadores no dependientes solo de color.
-- Soporte de teclado basico para acciones principales.
+-
 
 ## 8. Backlog
-### Epics
-- EP-1: Core loop de gameplay corto y divertido.
-- EP-2: Progresion y distribucion embebible segura.
+> Create as many epics/stories as needed. Do not impose artificial limits.
 
-### User stories
-- US-1 a US-4 definidos en `backlog/zombite/backlog.md`.
+### Epics
+- Epic 1:
+  - Outcome:
+  - Notes:
+- Epic 2:
+  - Outcome:
+  - Notes:
+
+### User Stories
+For each story include clear Acceptance Criteria (Given/When/Then).
+
+#### Story:
+- As a <actor>, I want <capability>, so that <benefit>.
+- Acceptance Criteria:
+  - Given ..., when ..., then ...
+  - Given ..., when ..., then ...
+
+(repeat as needed)
 
 ## 9. Test Cases (QA Persona)
-- TC-1 a TC-5 definidos en `tests/zombite/tests.md`.
-- Cobertura requerida: funcional, negativa/abuso, seguridad y edge cases.
+> Create as many test cases as needed. Include negative and edge cases.
+
+### Functional
+1.
+2.
+
+### Negative / Abuse
+1.
+2.
+
+### Security
+1.
+2.
+
+### Edge cases
+1.
+2.
 
 ## 10. Implementation Notes (Developer Persona)
-- Secuencia sugerida:
-  1) Motor base + ciclo de nivel.
-  2) Progresion y zombie alfa.
-  3) Adapter de embedding + validacion config.
-  4) Pulido de rendimiento, HUD y fallback.
-- Dependencias:
-  - Pipeline de assets optimizados.
-  - Harness de pruebas de embedding.
+- Suggested sequence:
+-
+- Dependencies:
+-
 - Rollout / fallback:
-  - Desplegar primero en entorno de prueba embebido.
-  - Fallback a defaults y desactivar config avanzada ante error.
+-
