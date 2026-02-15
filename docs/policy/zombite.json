@@ -1,7 +1,7 @@
 {
   "ok": true,
   "feature": "zombite",
-  "evaluatedAt": "2026-02-15T21:37:58.936Z",
+  "evaluatedAt": "2026-02-15T21:41:40.875Z",
   "policy": {
     "allowDependencyChanges": false,
     "blockedImports": [],
