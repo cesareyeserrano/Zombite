@@ -115,6 +115,12 @@ test('keyboard controls cover primary actions', () => {
   assert.match(indexHtml, /Enter starts\/continues/);
 });
 
+test('runtime blocks shots during decision states and prioritizes session timeout', () => {
+  assert.match(appJs, /if \(!state\.running \|\| state\.paused \|\| state\.gameOver \|\| state\.waitingDecision\) return;/);
+  assert.match(appJs, /function shoot\(point\)\s*\{\s*ensureAudioReady\(\);\s*if \(state\.waitingDecision\) return;/);
+  assert.match(appJs, /function onLevelComplete\(\)\s*\{\s*if \(state\.session\.elapsedMs >= state\.session\.limitMs\) \{\s*triggerSessionTimeout\(\);/);
+});
+
 test('session pacing controls exist in runtime', () => {
   assert.match(appJs, /SESSION_LIMIT_MS\s*=\s*8\s*\*\s*60\s*\*\s*1000/);
   assert.match(appJs, /state\.session\.elapsedMs\s*\+=\s*dt/);

@@ -334,7 +334,7 @@ ui.canvas.addEventListener("click", (event) => {
     ui.crosshair.classList.add("active");
     moveCrosshair(event);
   }
-  if (!state.running || state.paused || state.gameOver) return;
+  if (!state.running || state.paused || state.gameOver || state.waitingDecision) return;
   const point = IS_COARSE_POINTER
     ? { x: ui.canvas.width / 2, y: ui.canvas.height / 2 }
     : canvasPoint(event);
@@ -842,6 +842,7 @@ function levelHpScale(level) {
 
 function shoot(point) {
   ensureAudioReady();
+  if (state.waitingDecision) return;
   if (state.reloading || state.ammo <= 0) {
     if (state.ammo <= 0) queueReload();
     return;
@@ -932,6 +933,10 @@ function queueReload() {
 }
 
 function onLevelComplete() {
+  if (state.session.elapsedMs >= state.session.limitMs) {
+    triggerSessionTimeout();
+    return;
+  }
   state.savedLevel = state.level;
   if (state.level >= MAX_LEVEL) {
     state.running = false;
