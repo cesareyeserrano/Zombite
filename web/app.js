@@ -355,6 +355,9 @@ function handleEmbedMessage(event) {
   const now = performance.now();
   if (isEmbedBurstBlocked(now)) {
     recordEmbedReject("burst_blocked", event, now);
+    if (allowedOrigins.has(event.origin)) {
+      setStatus(statusText("Config rate limited"));
+    }
     return;
   }
 
@@ -418,6 +421,9 @@ function recordEmbedReject(reason, event, now = performance.now()) {
       state.embed.blockedUntilMs = now + INVALID_MESSAGE_COOLDOWN_MS;
       state.embed.rejectedMessages += 1;
       state.embed.rejectedByReason.burst_guard_armed = (state.embed.rejectedByReason.burst_guard_armed || 0) + 1;
+      if (allowedOrigins.has(event.origin)) {
+        setStatus(statusText("Config rate limited"));
+      }
       logEmbedMessage("rejected", "burst_guard_armed", event.origin, now);
     }
   }
@@ -429,10 +435,13 @@ function logEmbedMessage(outcome, reason, origin, now = performance.now()) {
   if (outcome === "rejected" && now - state.embed.lastLogMs < 220) return;
   state.embed.lastLogMs = now;
   const logger = outcome === "accepted" ? console.info : console.warn;
+  const cooldownRemainingMs = Math.max(0, Math.round(state.embed.blockedUntilMs - now));
   logger(`[Zombite][embed] ${outcome}:${reason}`, {
     origin,
     accepted: state.embed.acceptedMessages,
     rejected: state.embed.rejectedMessages,
+    invalidRecent: state.embed.invalidWindow.length,
+    cooldownRemainingMs,
   });
 }
 
@@ -842,6 +851,7 @@ function statusText(source) {
       Resumed: "Reanudado",
       "Config updated": "Configuracion actualizada",
       "Config ignored": "Configuracion ignorada",
+      "Config rate limited": "Configuracion limitada por rafaga",
       "You were overrun": "Los zombies te alcanzaron",
       "Victory - all 10 levels complete": "Victoria - completaste 10 niveles",
       Victory: "Victoria",

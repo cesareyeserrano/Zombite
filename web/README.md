@@ -47,3 +47,4 @@ iframe.contentWindow.postMessage(
 Validation behavior:
 - Unknown payload keys are rejected.
 - Known keys with invalid values are ignored, keeping safe defaults/current config.
+- Repeated invalid payloads trigger a temporary rate limit (`burst_guard_armed` / `burst_blocked`).

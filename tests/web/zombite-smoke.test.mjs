@@ -58,6 +58,10 @@ test('app hardens embed messaging with burst guard telemetry', () => {
   assert.match(appJs, /recordEmbedReject\("unknown_schema"/);
   assert.match(appJs, /recordEmbedReject\("invalid_values"/);
   assert.match(appJs, /"burst_blocked"/);
+  assert.match(appJs, /"burst_guard_armed"/);
+  assert.match(appJs, /setStatus\(statusText\("Config rate limited"\)\)/);
+  assert.match(appJs, /cooldownRemainingMs/);
+  assert.match(appJs, /invalidRecent/);
   assert.match(appJs, /\[Zombite\]\[embed\] \${outcome}:\${reason}/);
 });
 
@@ -67,6 +71,7 @@ test('app ignores known-schema payloads when values are invalid', () => {
   assert.match(appJs, /setStatus\(statusText\("Config ignored"\)\)/);
   assert.match(appJs, /return {\s*applied: false,/);
   assert.match(appJs, /"Config ignored": "Configuracion ignorada"/);
+  assert.match(appJs, /"Config rate limited": "Configuracion limitada por rafaga"/);
 });
 
 test('keyboard controls cover primary actions', () => {

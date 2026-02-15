@@ -1,7 +1,7 @@
 {
   "ok": true,
   "feature": "zombite",
-  "evaluatedAt": "2026-02-15T01:22:21.073Z",
+  "evaluatedAt": "2026-02-15T01:35:45.860Z",
   "policy": {
     "allowDependencyChanges": false,
     "blockedImports": [],
@@ -10,6 +10,7 @@
   "files": {
     "changed": [
       "docs/policy/zombite.json",
+      "docs/runbook/zombite-manual-playtest.md",
       "docs/verification/zombite.json",
       "tests/web/zombite-smoke.test.mjs",
       "web/README.md",
