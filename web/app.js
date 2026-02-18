@@ -1,0 +1,2425 @@
+"use strict";
+
+const MAX_LEVEL = 10;
+const BASE_MAGAZINE = 5;
+const BASE_HEALTH = 100;
+const SESSION_TARGET_MIN_MS = 3 * 60 * 1000;
+const SESSION_LIMIT_MS = 8 * 60 * 1000;
+const LEVEL_GOALS = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
+const ALPHA_LEVELS = new Set([4, 6, 8, 10]);
+const LAUNDROMAT_SCENE = {
+  name: "Laundromat",
+  skyTop: "#11121a",
+  skyMid: "#2a3a4a",
+  groundTop: "#2e2b25",
+  groundBottom: "#171615",
+};
+const THREAT_SCALE = ["Low", "Guarded", "Elevated", "High", "Critical", "Lethal"];
+const LEVEL_PACE = [1.0, 1.04, 1.08, 1.13, 1.18, 1.23, 1.28, 1.34, 1.4, 1.47];
+const LEVEL_HP_SCALE = [1.0, 1.0, 1.01, 1.03, 1.05, 1.07, 1.1, 1.13, 1.16, 1.2];
+const LEVEL_SCENES = [
+  LAUNDROMAT_SCENE,
+  { name: "City", skyTop: "#0f1525", skyMid: "#1d2b3f", groundTop: "#1c1e26", groundBottom: "#121319" },
+  { name: "Factory", skyTop: "#121018", skyMid: "#2b2320", groundTop: "#2a2624", groundBottom: "#1a1614" },
+  { name: "Countryside", skyTop: "#0e1d26", skyMid: "#234238", groundTop: "#213429", groundBottom: "#131f19" },
+  { name: "Highway", skyTop: "#10131c", skyMid: "#263247", groundTop: "#2e323a", groundBottom: "#1e2229" },
+  { name: "Harbor", skyTop: "#0d1b2b", skyMid: "#24495f", groundTop: "#244150", groundBottom: "#162736" },
+  { name: "Subway", skyTop: "#14141d", skyMid: "#2a2a34", groundTop: "#24242e", groundBottom: "#171720" },
+  { name: "Mall", skyTop: "#1b1522", skyMid: "#3b2f43", groundTop: "#2f2a35", groundBottom: "#1d1921" },
+  { name: "Hospital", skyTop: "#131d24", skyMid: "#2f4550", groundTop: "#2b3b44", groundBottom: "#1a252c" },
+  { name: "Airport", skyTop: "#101a26", skyMid: "#2f3f4f", groundTop: "#2a333c", groundBottom: "#1a2028" },
+];
+const SCENE_PROFILE = {
+  Laundromat: {
+    threat: THREAT_SCALE[0],
+    speedBoost: 0.04,
+    hpBoost: 0,
+    sizeBoost: -1,
+    wobbleBoost: 0,
+    damageBoost: 0,
+    zombieColor: "#6d8b66",
+    alphaColor: "#a57860",
+  },
+  City: {
+    threat: THREAT_SCALE[0],
+    speedBoost: 0.05,
+    hpBoost: 0,
+    sizeBoost: 0,
+    wobbleBoost: 1,
+    damageBoost: 0,
+    zombieColor: "#7f916a",
+    alphaColor: "#ba7c6a",
+  },
+  Factory: {
+    threat: THREAT_SCALE[1],
+    speedBoost: 0.08,
+    hpBoost: 1,
+    sizeBoost: 1,
+    wobbleBoost: 2,
+    damageBoost: 0.6,
+    zombieColor: "#839474",
+    alphaColor: "#c98f70",
+  },
+  Countryside: {
+    threat: THREAT_SCALE[1],
+    speedBoost: 0.11,
+    hpBoost: 1,
+    sizeBoost: 1,
+    wobbleBoost: 1,
+    damageBoost: 0.8,
+    zombieColor: "#7a9363",
+    alphaColor: "#bb7d58",
+  },
+  Highway: {
+    threat: THREAT_SCALE[2],
+    speedBoost: 0.14,
+    hpBoost: 1,
+    sizeBoost: 2,
+    wobbleBoost: 2,
+    damageBoost: 1.2,
+    zombieColor: "#8b8f7e",
+    alphaColor: "#cb8766",
+  },
+  Harbor: {
+    threat: THREAT_SCALE[3],
+    speedBoost: 0.18,
+    hpBoost: 1,
+    sizeBoost: 2,
+    wobbleBoost: 2,
+    damageBoost: 1.6,
+    zombieColor: "#7e9488",
+    alphaColor: "#ca815f",
+  },
+  Subway: {
+    threat: THREAT_SCALE[3],
+    speedBoost: 0.22,
+    hpBoost: 2,
+    sizeBoost: 2,
+    wobbleBoost: 3,
+    damageBoost: 2.0,
+    zombieColor: "#8a948f",
+    alphaColor: "#d38f72",
+  },
+  Mall: {
+    threat: THREAT_SCALE[4],
+    speedBoost: 0.26,
+    hpBoost: 2,
+    sizeBoost: 3,
+    wobbleBoost: 3,
+    damageBoost: 2.5,
+    zombieColor: "#919684",
+    alphaColor: "#d89875",
+  },
+  Hospital: {
+    threat: THREAT_SCALE[4],
+    speedBoost: 0.31,
+    hpBoost: 2,
+    sizeBoost: 3,
+    wobbleBoost: 4,
+    damageBoost: 3.0,
+    zombieColor: "#8a9d8c",
+    alphaColor: "#da9a79",
+  },
+  Airport: {
+    threat: THREAT_SCALE[5],
+    speedBoost: 0.37,
+    hpBoost: 3,
+    sizeBoost: 4,
+    wobbleBoost: 4,
+    damageBoost: 3.6,
+    zombieColor: "#98a08f",
+    alphaColor: "#e1a784",
+  },
+};
+const INVALID_MESSAGE_WINDOW_MS = 1500;
+const INVALID_MESSAGE_LIMIT = 8;
+const INVALID_MESSAGE_COOLDOWN_MS = 4000;
+const HIT_STOP_PROFILE = {
+  normal: { drag: 0.74, curve: 1.24, baseMs: 20, spanMs: 24, powerScale: 0.9 },
+  alpha: { drag: 0.8, curve: 1.18, baseMs: 24, spanMs: 30, powerScale: 0.94 },
+  kill: { drag: 0.86, curve: 1.08, baseMs: 28, spanMs: 34, powerScale: 0.97 },
+  alpha_kill: { drag: 0.92, curve: 1.0, baseMs: 34, spanMs: 42, powerScale: 1 },
+};
+const IS_COARSE_POINTER = Boolean(window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
+
+const ui = {
+  canvas: document.getElementById("arena"),
+  levelLabel: document.getElementById("levelLabel"),
+  sceneLabel: document.getElementById("sceneLabel"),
+  goalLabel: document.getElementById("goalLabel"),
+  statusLabel: document.getElementById("statusLabel"),
+  sessionLabel: document.getElementById("sessionLabel"),
+  threatLabel: document.getElementById("threatLabel"),
+  ammoLabel: document.getElementById("ammoLabel"),
+  healthLabel: document.getElementById("healthLabel"),
+  cashLabel: document.getElementById("cashLabel"),
+  missionTime: document.getElementById("missionTime"),
+  crosshair: document.getElementById("crosshair"),
+  startBtn: document.getElementById("startBtn"),
+  reloadBtn: document.getElementById("reloadBtn"),
+  pauseBtn: document.getElementById("pauseBtn"),
+  fireBtn: document.getElementById("fireBtn"),
+  muzzleFlash: document.getElementById("muzzleFlash"),
+  outcomePanel: document.getElementById("outcomePanel"),
+  outcomeTitle: document.getElementById("outcomeTitle"),
+  outcomeText: document.getElementById("outcomeText"),
+  continueBtn: document.getElementById("continueBtn"),
+  restartBtn: document.getElementById("restartBtn"),
+};
+
+const ctx = ui.canvas.getContext("2d");
+const state = {
+  running: false,
+  paused: false,
+  gameOver: false,
+  level: 1,
+  killsInLevel: 0,
+  goalInLevel: 0,
+  spawnsInLevel: 0,
+  alphaSpawnedInLevel: false,
+  score: 0,
+  health: BASE_HEALTH,
+  ammo: BASE_MAGAZINE,
+  reloading: false,
+  nextSpawnMs: 0,
+  zombies: [],
+  pointer: { x: ui.canvas.width / 2, y: ui.canvas.height / 2 },
+  pointerVisible: !IS_COARSE_POINTER,
+  lastTs: 0,
+  waitingDecision: false,
+  decisionMode: "none",
+  savedLevel: 1,
+  session: {
+    elapsedMs: 0,
+    targetMinMs: SESSION_TARGET_MIN_MS,
+    limitMs: SESSION_LIMIT_MS,
+  },
+  config: {
+    language: "en",
+    volume: 0.7,
+    startLevel: 1,
+    difficulty: "normal",
+  },
+  perf: {
+    quality: "high",
+    sampleFpsSum: 0,
+    sampleFrames: 0,
+    lowScore: 0,
+    highScore: 0,
+  },
+  impacts: [],
+  bloodPools: [],
+  hitMarker: {
+    ttl: 0,
+    tone: "normal",
+  },
+  weapon: {
+    recoil: 0,
+    swayX: 0,
+    swayY: 0,
+    swayTargetX: 0,
+    swayTargetY: 0,
+    shotLightTtl: 0,
+  },
+  camera: {
+    shakeMs: 0,
+    intensity: 0,
+  },
+  damageFx: {
+    ttl: 0,
+    intensity: 0,
+    pulse: 0,
+  },
+  hitStop: {
+    ttl: 0,
+    maxTtl: 0,
+    intensity: 0,
+    mode: "none",
+  },
+  audio: {
+    ctx: null,
+    unlocked: false,
+  },
+  embed: {
+    acceptedMessages: 0,
+    rejectedMessages: 0,
+    rejectedByReason: {},
+    invalidWindow: [],
+    blockedUntilMs: 0,
+    lastLogMs: 0,
+  },
+};
+
+const schemaKeys = new Set([
+  "language",
+  "volume",
+  "startLevel",
+  "difficulty",
+  "difficultyInitial",
+  "dificultadInicial",
+]);
+const queryConfig = readQueryConfig();
+const allowedOrigins = buildAllowedOrigins(queryConfig.allowedOrigin);
+applyConfig(queryConfig);
+refreshHud();
+bootRuntime();
+initializeCrosshair();
+syncCrosshairOverlay();
+
+ui.startBtn.addEventListener("click", () => {
+  if (!state.running || state.gameOver) {
+    startGame();
+    return;
+  }
+  if (state.paused) {
+    togglePause();
+  }
+});
+
+ui.reloadBtn.addEventListener("click", () => {
+  queueReload();
+});
+
+ui.pauseBtn.addEventListener("click", () => {
+  if (!state.running || state.gameOver) return;
+  togglePause();
+});
+
+ui.continueBtn.addEventListener("click", () => {
+  if (!state.waitingDecision) return;
+  continueRun();
+});
+
+ui.restartBtn.addEventListener("click", () => {
+  restartRun();
+});
+
+ui.canvas.addEventListener("pointermove", (event) => {
+  const point = canvasPoint(event);
+  if (!IS_COARSE_POINTER) {
+    state.pointer.x = point.x;
+    state.pointer.y = point.y;
+  }
+  if (!IS_COARSE_POINTER) {
+    state.pointerVisible = true;
+    ui.crosshair.classList.add("active");
+  }
+  moveCrosshair(event);
+});
+
+ui.canvas.addEventListener("pointerenter", (event) => {
+  if (!IS_COARSE_POINTER) {
+    state.pointerVisible = true;
+    ui.crosshair.classList.add("active");
+  }
+  moveCrosshair(event);
+});
+
+ui.canvas.addEventListener("pointerleave", () => {
+  if (IS_COARSE_POINTER) {
+    snapCrosshairToCenter();
+    syncCrosshairOverlay();
+    return;
+  }
+  state.pointerVisible = false;
+  state.weapon.swayTargetX = 0;
+  state.weapon.swayTargetY = 0;
+  snapCrosshairToCenter();
+  syncCrosshairOverlay();
+});
+
+ui.canvas.addEventListener("click", (event) => {
+  if (!IS_COARSE_POINTER) {
+    state.pointerVisible = true;
+    ui.crosshair.classList.add("active");
+    moveCrosshair(event);
+  }
+  if (!state.running || state.paused || state.gameOver || state.waitingDecision) return;
+  const point = IS_COARSE_POINTER
+    ? { x: ui.canvas.width / 2, y: ui.canvas.height / 2 }
+    : canvasPoint(event);
+  shoot(point);
+});
+
+if (ui.fireBtn) {
+  ui.fireBtn.addEventListener("click", (event) => {
+    event.preventDefault();
+    shootFromKeyboard();
+  });
+}
+
+window.addEventListener("resize", () => {
+  if (IS_COARSE_POINTER) {
+    snapCrosshairToCenter();
+    syncCrosshairOverlay();
+    return;
+  }
+  if (!state.pointerVisible) {
+    snapCrosshairToCenter();
+  }
+});
+
+window.addEventListener("keydown", (event) => {
+  const key = event.key.toLowerCase();
+  if (key === "r") {
+    queueReload();
+    return;
+  }
+  if (key === "p" && state.running && !state.gameOver) {
+    togglePause();
+    return;
+  }
+  if ((key === " " || key === "spacebar") && state.running && !state.gameOver) {
+    event.preventDefault();
+    shootFromKeyboard();
+    return;
+  }
+  if (key === "enter") {
+    event.preventDefault();
+    if (state.waitingDecision) {
+      continueRun();
+      return;
+    }
+    if (!state.running || state.gameOver) {
+      startGame();
+      return;
+    }
+    if (state.paused) {
+      togglePause();
+    }
+    return;
+  }
+  if (key === "escape" && state.running && !state.gameOver) {
+    togglePause();
+  }
+});
+
+window.addEventListener("message", (event) => {
+  handleEmbedMessage(event);
+});
+
+function readQueryConfig() {
+  const params = new URLSearchParams(window.location.search);
+  return {
+    language: params.get("language"),
+    volume: params.get("volume"),
+    startLevel: params.get("startLevel"),
+    difficulty: params.get("difficulty"),
+    difficultyInitial: params.get("difficultyInitial"),
+    dificultadInicial: params.get("dificultadInicial"),
+    allowedOrigin: params.get("allowedOrigin"),
+  };
+}
+
+function buildAllowedOrigins(rawList) {
+  const origins = new Set([window.location.origin]);
+  if (!rawList) return origins;
+  const segments = rawList.split(",").map((item) => item.trim());
+  for (const origin of segments) {
+    if (!origin) continue;
+    if (isValidUrlOrigin(origin)) origins.add(origin);
+  }
+  return origins;
+}
+
+function hasKnownSchema(payload) {
+  const keys = Object.keys(payload);
+  if (keys.length === 0) return false;
+  return keys.every((key) => schemaKeys.has(key));
+}
+
+function handleEmbedMessage(event) {
+  const now = performance.now();
+  if (isEmbedBurstBlocked(now)) {
+    recordEmbedReject("burst_blocked", event, now);
+    if (allowedOrigins.has(event.origin)) {
+      setStatus(statusText("Config rate limited"));
+    }
+    return;
+  }
+
+  if (!allowedOrigins.has(event.origin)) {
+    recordEmbedReject("origin_blocked", event, now);
+    return;
+  }
+
+  const message = event.data;
+  if (!message || typeof message !== "object") {
+    recordEmbedReject("invalid_envelope", event, now);
+    return;
+  }
+
+  const messageType = typeof message.type === "string" ? message.type : "";
+  if (!messageType.startsWith("zombite.")) return;
+  if (messageType !== "zombite.configure") {
+    recordEmbedReject("unsupported_type", event, now);
+    return;
+  }
+
+  if (!message.payload || typeof message.payload !== "object") {
+    recordEmbedReject("invalid_payload", event, now);
+    return;
+  }
+  if (!hasKnownSchema(message.payload)) {
+    recordEmbedReject("unknown_schema", event, now);
+    return;
+  }
+
+  const configResult = applyConfig(message.payload);
+  if (!configResult.applied) {
+    recordEmbedReject("invalid_values", event, now);
+    setStatus(statusText("Config ignored"));
+    return;
+  }
+
+  state.embed.acceptedMessages += 1;
+  setStatus(statusText("Config updated"));
+  logEmbedMessage("accepted", "config_updated", event.origin, now);
+}
+
+function pruneEmbedInvalidWindow(now) {
+  const cutoff = now - INVALID_MESSAGE_WINDOW_MS;
+  state.embed.invalidWindow = state.embed.invalidWindow.filter((entry) => entry >= cutoff);
+}
+
+function isEmbedBurstBlocked(now) {
+  pruneEmbedInvalidWindow(now);
+  return now < state.embed.blockedUntilMs;
+}
+
+function recordEmbedReject(reason, event, now = performance.now()) {
+  state.embed.rejectedMessages += 1;
+  state.embed.rejectedByReason[reason] = (state.embed.rejectedByReason[reason] || 0) + 1;
+
+  if (reason !== "burst_blocked") {
+    state.embed.invalidWindow.push(now);
+    pruneEmbedInvalidWindow(now);
+    if (state.embed.invalidWindow.length >= INVALID_MESSAGE_LIMIT) {
+      state.embed.blockedUntilMs = now + INVALID_MESSAGE_COOLDOWN_MS;
+      state.embed.rejectedMessages += 1;
+      state.embed.rejectedByReason.burst_guard_armed = (state.embed.rejectedByReason.burst_guard_armed || 0) + 1;
+      if (allowedOrigins.has(event.origin)) {
+        setStatus(statusText("Config rate limited"));
+      }
+      logEmbedMessage("rejected", "burst_guard_armed", event.origin, now);
+    }
+  }
+
+  logEmbedMessage("rejected", reason, event.origin, now);
+}
+
+function logEmbedMessage(outcome, reason, origin, now = performance.now()) {
+  if (outcome === "rejected" && now - state.embed.lastLogMs < 220) return;
+  state.embed.lastLogMs = now;
+  const logger = outcome === "accepted" ? console.info : console.warn;
+  const cooldownRemainingMs = Math.max(0, Math.round(state.embed.blockedUntilMs - now));
+  logger(`[Zombite][embed] ${outcome}:${reason}`, {
+    origin,
+    accepted: state.embed.acceptedMessages,
+    rejected: state.embed.rejectedMessages,
+    invalidRecent: state.embed.invalidWindow.length,
+    cooldownRemainingMs,
+  });
+}
+
+function sanitizeConfig(next) {
+  const normalized = normalizeConfigInput(next);
+  const sanitized = {};
+
+  if (typeof normalized.language === "string") {
+    const lang = normalized.language.trim().toLowerCase();
+    if (lang === "es" || lang === "en") sanitized.language = lang;
+  }
+
+  if (normalized.volume !== undefined) {
+    const value = Number(normalized.volume);
+    if (Number.isFinite(value)) {
+      sanitized.volume = clamp(value, 0, 1);
+    }
+  }
+
+  if (normalized.startLevel !== undefined) {
+    const value = Number(normalized.startLevel);
+    if (Number.isFinite(value)) {
+      sanitized.startLevel = Math.round(clamp(value, 1, MAX_LEVEL));
+    }
+  }
+
+  if (typeof normalized.difficulty === "string") {
+    const mode = normalized.difficulty.trim().toLowerCase();
+    if (mode === "easy" || mode === "normal" || mode === "hard") {
+      sanitized.difficulty = mode;
+    }
+  }
+
+  return sanitized;
+}
+
+function normalizeConfigInput(raw) {
+  const next = raw && typeof raw === "object" ? { ...raw } : {};
+  if (next.difficulty === undefined && typeof next.difficultyInitial === "string") {
+    next.difficulty = next.difficultyInitial;
+  }
+  if (next.difficulty === undefined && typeof next.dificultadInicial === "string") {
+    next.difficulty = next.dificultadInicial;
+  }
+  return next;
+}
+
+function applyConfig(incoming) {
+  const sanitized = sanitizeConfig(incoming || {});
+  if (Object.keys(sanitized).length === 0) {
+    refreshHud();
+    return {
+      applied: false,
+      sanitized,
+    };
+  }
+
+  state.config = { ...state.config, ...sanitized };
+  if (!state.running || state.gameOver) {
+    state.level = state.config.startLevel;
+  }
+  refreshHud();
+  return {
+    applied: true,
+    sanitized,
+  };
+}
+
+function startGame() {
+  state.running = true;
+  state.paused = false;
+  state.gameOver = false;
+  state.waitingDecision = false;
+  state.decisionMode = "none";
+  state.score = 0;
+  state.session.elapsedMs = 0;
+  state.health = BASE_HEALTH;
+  state.level = state.config.startLevel;
+  state.savedLevel = state.level;
+  ui.pauseBtn.textContent = "Pause";
+  state.zombies = [];
+  state.impacts = [];
+  state.bloodPools = [];
+  state.camera.shakeMs = 0;
+  state.camera.intensity = 0;
+  state.damageFx.ttl = 0;
+  state.damageFx.intensity = 0;
+  state.damageFx.pulse = 0;
+  state.hitStop.ttl = 0;
+  state.hitStop.maxTtl = 0;
+  state.hitStop.intensity = 0;
+  state.hitStop.mode = "none";
+  state.ammo = BASE_MAGAZINE;
+  state.reloading = false;
+  state.weapon.recoil = 0;
+  state.weapon.swayX = 0;
+  state.weapon.swayY = 0;
+  state.weapon.swayTargetX = 0;
+  state.weapon.swayTargetY = 0;
+  state.weapon.shotLightTtl = 0;
+  if (IS_COARSE_POINTER) {
+    state.pointerVisible = false;
+    snapCrosshairToCenter();
+  }
+  syncCrosshairOverlay();
+  hideOutcome();
+  beginLevel();
+  state.lastTs = performance.now();
+  setStatus(statusText("Hunt started"));
+  requestAnimationFrame(loop);
+}
+
+function beginLevel() {
+  state.savedLevel = state.level;
+  state.killsInLevel = 0;
+  state.goalInLevel = goalForLevel(state.level);
+  state.spawnsInLevel = 0;
+  state.alphaSpawnedInLevel = false;
+  state.zombies = [];
+  state.nextSpawnMs = 0;
+  setStatus(statusText(`Level ${state.level} - ${currentScene().name}`));
+  refreshHud();
+}
+
+function loop(ts) {
+  if (!state.running) return;
+  const dt = Math.min(40, ts - state.lastTs);
+  state.lastTs = ts;
+  observePerformance(dt);
+
+  if (!state.paused && !state.gameOver && !state.waitingDecision) {
+    update(dt);
+  }
+
+  draw();
+  requestAnimationFrame(loop);
+}
+
+function update(dt) {
+  state.session.elapsedMs += dt;
+  if (state.session.elapsedMs >= state.session.limitMs) {
+    triggerSessionTimeout();
+    return;
+  }
+
+  let worldScale = 1;
+  if (state.hitStop.ttl > 0) {
+    const profile = HIT_STOP_PROFILE[state.hitStop.mode] || HIT_STOP_PROFILE.normal;
+    const life = state.hitStop.maxTtl > 0 ? clamp(state.hitStop.ttl / state.hitStop.maxTtl, 0, 1) : 0;
+    const curveLife = Math.pow(life, profile.curve);
+    state.hitStop.ttl = Math.max(0, state.hitStop.ttl - dt);
+    worldScale = clamp(1 - profile.drag * state.hitStop.intensity * curveLife, 0.08, 1);
+    if (state.hitStop.ttl === 0) {
+      state.hitStop.maxTtl = 0;
+      state.hitStop.intensity = 0;
+      state.hitStop.mode = "none";
+    }
+  }
+  const worldDt = dt * worldScale;
+
+  state.nextSpawnMs -= worldDt;
+  if (state.nextSpawnMs <= 0) {
+    spawnZombie();
+    state.nextSpawnMs = spawnIntervalMs();
+  }
+
+  const arenaHeight = ui.canvas.height;
+  const profile = currentProfile();
+  const damageRate =
+    (state.config.difficulty === "hard" ? 11 : state.config.difficulty === "easy" ? 6 : 8) + profile.damageBoost;
+
+  for (let i = state.zombies.length - 1; i >= 0; i -= 1) {
+    const z = state.zombies[i];
+    const step = worldDt / 16.6;
+    const staggerFactor = z.staggerMs > 0 ? 0.34 : 1;
+    z.staggerMs = Math.max(0, z.staggerMs - worldDt);
+    z.y += z.speed * step * staggerFactor;
+    z.x += Math.sin((performance.now() + z.phase) * 0.001 * z.wobbleSpeed) * z.wobble;
+    if (z.knockbackX || z.knockbackY) {
+      z.x += z.knockbackX * step;
+      z.y += z.knockbackY * step;
+      const decay = Math.pow(0.84, step);
+      z.knockbackX *= decay;
+      z.knockbackY *= decay;
+      if (Math.abs(z.knockbackX) < 0.02) z.knockbackX = 0;
+      if (Math.abs(z.knockbackY) < 0.02) z.knockbackY = 0;
+    }
+    if (z.hitTilt) {
+      z.hitTilt *= Math.pow(0.84, step);
+      if (Math.abs(z.hitTilt) < 0.002) z.hitTilt = 0;
+    }
+
+    if (z.y > arenaHeight - 78) {
+      applyPlayerDamage(z.isAlpha ? damageRate * 1.8 : damageRate);
+      state.zombies.splice(i, 1);
+      if (state.health <= 0) {
+        triggerGameOver("You were overrun");
+        return;
+      }
+    }
+  }
+
+  for (let i = state.impacts.length - 1; i >= 0; i -= 1) {
+    state.impacts[i].ttl -= dt;
+    if (state.impacts[i].ttl <= 0) state.impacts.splice(i, 1);
+  }
+
+  for (let i = state.bloodPools.length - 1; i >= 0; i -= 1) {
+    state.bloodPools[i].ttl -= dt;
+    if (state.bloodPools[i].ttl <= 0) state.bloodPools.splice(i, 1);
+  }
+
+  if (state.hitMarker.ttl > 0) {
+    state.hitMarker.ttl = Math.max(0, state.hitMarker.ttl - dt);
+  }
+  if (state.weapon.recoil > 0) {
+    state.weapon.recoil = Math.max(0, state.weapon.recoil - dt * 0.01);
+  }
+  if (state.weapon.shotLightTtl > 0) {
+    state.weapon.shotLightTtl = Math.max(0, state.weapon.shotLightTtl - dt);
+  }
+  if (state.damageFx.ttl > 0) {
+    state.damageFx.ttl = Math.max(0, state.damageFx.ttl - dt);
+    state.damageFx.pulse += dt * 0.018;
+    state.damageFx.intensity = Math.max(0, state.damageFx.intensity - dt * 0.0006);
+  }
+  const swayLerp = Math.min(1, dt * 0.012);
+  state.weapon.swayX += (state.weapon.swayTargetX - state.weapon.swayX) * swayLerp;
+  state.weapon.swayY += (state.weapon.swayTargetY - state.weapon.swayY) * swayLerp;
+  syncCrosshairOverlay();
+
+  if (state.camera.shakeMs > 0) {
+    state.camera.shakeMs = Math.max(0, state.camera.shakeMs - dt);
+    if (state.camera.shakeMs === 0) {
+      state.camera.intensity = 0;
+    }
+  }
+  refreshHud();
+}
+
+function spawnZombie() {
+  const width = ui.canvas.width;
+  const levelBias = state.level / MAX_LEVEL;
+  const profile = currentProfile();
+  const pace = levelPace(state.level);
+  const hpScale = levelHpScale(state.level);
+  const alphaLevelGate = levelHasAlpha(state.level);
+  const forceAlpha = alphaLevelGate && !state.alphaSpawnedInLevel && state.spawnsInLevel >= alphaSpawnAtSpawnCount(state.level);
+  const alphaRoll = alphaLevelGate && Math.random() < 0.03 + levelBias * 0.11;
+  const isAlpha = forceAlpha || (alphaLevelGate && alphaRoll);
+  const firstAlphaThisLevel = isAlpha && !state.alphaSpawnedInLevel;
+  const rushLevel = clamp((state.level - 5) / 5, 0, 1);
+  const rush = clamp((isAlpha ? 0.45 : 0) + rushLevel * 0.82 + Math.random() * 0.18, 0, 1);
+  const baseHp = isAlpha ? 3 + Math.floor((state.level - 1) / 3) : 1 + Math.floor((state.level - 1) / 4);
+  const scaledHp = Math.max(1, Math.round(baseHp * hpScale));
+
+  const z = {
+    isAlpha,
+    x: 80 + Math.random() * (width - 160),
+    y: 120 + Math.random() * 40,
+    radius: (isAlpha ? 36 : 24) + profile.sizeBoost,
+    hp: scaledHp + profile.hpBoost,
+    speed: (1.0 + levelBias * 0.95 + profile.speedBoost) * difficultyFactor() * pace * (1 + rush * 0.24),
+    wobble: (isAlpha ? 24 : 14) + profile.wobbleBoost,
+    wobbleSpeed: (isAlpha ? 1.6 : 1.0) + rush * 0.46,
+    rush,
+    knockbackX: 0,
+    knockbackY: 0,
+    staggerMs: 0,
+    hitTilt: 0,
+    phase: Math.random() * 1000,
+    color: isAlpha ? profile.alphaColor : profile.zombieColor,
+  };
+  state.zombies.push(z);
+  state.spawnsInLevel += 1;
+  if (isAlpha) state.alphaSpawnedInLevel = true;
+  if (firstAlphaThisLevel) {
+    setStatus(statusText("Alpha spotted"));
+  }
+
+  const maxOnScreen = 5 + Math.floor(state.level / 2) - (state.perf.quality === "low" ? 2 : 0);
+  if (state.zombies.length > maxOnScreen) state.zombies.shift();
+}
+
+function difficultyFactor() {
+  if (state.config.difficulty === "easy") return 0.86;
+  if (state.config.difficulty === "hard") return 1.18;
+  return 1;
+}
+
+function spawnIntervalMs() {
+  const levelScale = 920 - state.level * 46;
+  const pacedScale = levelScale / levelPace(state.level);
+  return clamp(pacedScale / difficultyFactor(), 220, 850);
+}
+
+function goalForLevel(level) {
+  const idx = clamp(level, 1, MAX_LEVEL) - 1;
+  return LEVEL_GOALS[idx];
+}
+
+function levelHasAlpha(level) {
+  const normalized = Math.round(clamp(level, 1, MAX_LEVEL));
+  return ALPHA_LEVELS.has(normalized);
+}
+
+function alphaSpawnAtSpawnCount(level) {
+  const normalized = Math.round(clamp(level, 1, MAX_LEVEL));
+  return clamp(7 - Math.floor(normalized / 2), 2, 5);
+}
+
+function levelPace(level) {
+  const normalized = Math.round(clamp(level, 1, MAX_LEVEL));
+  return LEVEL_PACE[normalized - 1];
+}
+
+function levelHpScale(level) {
+  const normalized = Math.round(clamp(level, 1, MAX_LEVEL));
+  return LEVEL_HP_SCALE[normalized - 1];
+}
+
+function shoot(point) {
+  ensureAudioReady();
+  if (state.waitingDecision) return;
+  if (state.reloading || state.ammo <= 0) {
+    if (state.ammo <= 0) queueReload();
+    return;
+  }
+  state.ammo -= 1;
+  state.weapon.recoil = Math.min(1, state.weapon.recoil + 0.9);
+  state.weapon.shotLightTtl = Math.max(state.weapon.shotLightTtl, 130);
+  flashMuzzle();
+  startCameraShake(65, 2.4);
+  playShotSound();
+  let hit = false;
+  let hitStopStrength = 0;
+  let hitStopMode = "none";
+  let hitStopRank = 0;
+
+  for (let i = state.zombies.length - 1; i >= 0; i -= 1) {
+    const z = state.zombies[i];
+    const dx = point.x - z.x;
+    const dy = point.y - z.y;
+    const precisionWindow = Math.max(2, 8 - Math.floor(state.level / 2));
+    if (Math.hypot(dx, dy) <= z.radius + precisionWindow) {
+      z.hp -= 1;
+      applyZombieImpactReaction(z, point);
+      hit = true;
+      const impactStrength = z.isAlpha ? 0.56 : 0.42;
+      const impactMode = z.isAlpha ? "alpha" : "normal";
+      const impactRank = z.isAlpha ? 2 : 1;
+      if (impactStrength > hitStopStrength) hitStopStrength = impactStrength;
+      if (impactRank >= hitStopRank) {
+        hitStopMode = impactMode;
+        hitStopRank = impactRank;
+      }
+      triggerHitMarker(z.isAlpha ? "alpha" : "normal");
+      addImpact(point.x, point.y, z.isAlpha ? "#ffbdb0" : "#b7ffbf");
+      playHitSound(z.isAlpha);
+      if (z.hp <= 0) {
+        const killStrength = z.isAlpha ? 1 : 0.78;
+        const killMode = z.isAlpha ? "alpha_kill" : "kill";
+        const killRank = z.isAlpha ? 4 : 3;
+        if (killStrength > hitStopStrength) hitStopStrength = killStrength;
+        if (killRank >= hitStopRank) {
+          hitStopMode = killMode;
+          hitStopRank = killRank;
+        }
+        triggerHitMarker(z.isAlpha ? "alpha_kill" : "kill");
+        addBloodPool(z.x, z.y, z.isAlpha);
+        playKillSound(z.isAlpha);
+        state.zombies.splice(i, 1);
+        state.killsInLevel += 1;
+        state.score += z.isAlpha ? 55 : 10;
+        if (state.killsInLevel >= state.goalInLevel) {
+          onLevelComplete();
+          break;
+        }
+      }
+    }
+  }
+
+  if (!hit) {
+    state.score = Math.max(0, state.score - 1);
+  }
+  if (hitStopStrength > 0) {
+    triggerHitStop(hitStopStrength, hitStopMode);
+  }
+
+  if (state.ammo <= 0) queueReload();
+  refreshHud();
+}
+
+function shootFromKeyboard() {
+  if (!state.running || state.paused || state.gameOver || state.waitingDecision) return;
+  const point = IS_COARSE_POINTER || !state.pointerVisible
+    ? { x: ui.canvas.width / 2, y: ui.canvas.height / 2 }
+    : { x: state.pointer.x, y: state.pointer.y };
+  shoot(point);
+}
+
+function queueReload() {
+  if (state.reloading || state.ammo === BASE_MAGAZINE || state.gameOver || !state.running) return;
+  state.reloading = true;
+  setStatus(statusText("Reloading"));
+  setTimeout(() => {
+    state.ammo = BASE_MAGAZINE;
+    state.reloading = false;
+    setStatus(statusText("Ready"));
+    refreshHud();
+  }, 1000);
+}
+
+function onLevelComplete() {
+  if (state.session.elapsedMs >= state.session.limitMs) {
+    triggerSessionTimeout();
+    return;
+  }
+  state.savedLevel = state.level;
+  if (state.level >= MAX_LEVEL) {
+    state.running = false;
+    state.gameOver = true;
+    showOutcome({
+      title: statusText("Victory"),
+      text: statusText("You cleared all 10 levels"),
+      continueText: statusText("Play again"),
+      mode: "victory",
+    });
+    setStatus(statusText("Victory - all 10 levels complete"));
+    refreshHud();
+    return;
+  }
+
+  showOutcome({
+    title: statusText("Level complete"),
+    text: statusText("You can continue to the next level or restart."),
+    continueText: statusText("Continue"),
+    mode: "level_complete",
+  });
+  setStatus(statusText("Level complete - choose next action"));
+  refreshHud();
+}
+
+function triggerGameOver(text) {
+  state.gameOver = true;
+  state.waitingDecision = true;
+  state.decisionMode = "game_over";
+  showOutcome({
+    title: statusText("Level failed"),
+    text: statusText("You can retry this level or restart the run."),
+    continueText: statusText("Retry level"),
+    mode: "game_over",
+  });
+  setStatus(statusText(text));
+  refreshHud();
+}
+
+function triggerSessionTimeout() {
+  state.running = false;
+  state.gameOver = true;
+  showOutcome({
+    title: statusText("Session complete"),
+    text: statusText("The 8-minute run ended. Restart to play again."),
+    continueText: statusText("Play again"),
+    mode: "victory",
+  });
+  setStatus(statusText("Time is up"));
+  refreshHud();
+}
+
+function togglePause() {
+  state.paused = !state.paused;
+  ui.pauseBtn.textContent = state.paused ? "Resume" : "Pause";
+  setStatus(statusText(state.paused ? "Paused" : "Resumed"));
+}
+
+function refreshHud() {
+  const scene = currentScene();
+  const profile = currentProfile();
+  const remainingMs = Math.max(0, state.session.limitMs - state.session.elapsedMs);
+  ui.levelLabel.textContent = `Level ${state.level}/${MAX_LEVEL}`;
+  ui.sceneLabel.textContent = `Scene ${scene.name}`;
+  ui.goalLabel.textContent = `Goal ${state.killsInLevel}/${state.goalInLevel}`;
+  if (ui.sessionLabel) {
+    ui.sessionLabel.textContent = `Time ${formatClock(remainingMs)}`;
+  }
+  if (ui.missionTime) {
+    ui.missionTime.textContent = `${Math.max(1, Math.ceil(remainingMs / 60000))}m`;
+  }
+  const alphaSuffix = levelHasAlpha(state.level) ? " +Alpha" : "";
+  ui.threatLabel.textContent = `Threat ${profile.threat}${alphaSuffix}`;
+  ui.ammoLabel.textContent = state.reloading ? "Ammo reloading..." : `Ammo ${state.ammo}/${BASE_MAGAZINE}`;
+  ui.healthLabel.textContent = `Health ${Math.max(0, Math.round(state.health))}`;
+  if (ui.cashLabel) {
+    ui.cashLabel.textContent = `$ ${Math.max(0, Math.round(state.score))}`;
+  }
+}
+
+function formatClock(ms) {
+  const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
+  const min = Math.floor(totalSeconds / 60)
+    .toString()
+    .padStart(2, "0");
+  const sec = (totalSeconds % 60).toString().padStart(2, "0");
+  return `${min}:${sec}`;
+}
+
+function setStatus(text) {
+  ui.statusLabel.textContent = text;
+}
+
+function statusText(source) {
+  if (state.config.language === "es") {
+    const map = {
+      "Press Start": "Presiona Start",
+      "Hunt started": "Caceria iniciada",
+      Reloading: "Recargando",
+      Ready: "Listo",
+      Paused: "Pausa",
+      Resumed: "Reanudado",
+      "Config updated": "Configuracion actualizada",
+      "Config ignored": "Configuracion ignorada",
+      "Config rate limited": "Configuracion limitada por rafaga",
+      "You were overrun": "Los zombies te alcanzaron",
+      "Victory - all 10 levels complete": "Victoria - completaste 10 niveles",
+      Victory: "Victoria",
+      "You cleared all 10 levels": "Completaste los 10 niveles",
+      "Play again": "Jugar otra vez",
+      "Level complete": "Nivel completado",
+      "You can continue to the next level or restart.": "Puedes continuar al siguiente nivel o reiniciar.",
+      Continue: "Continuar",
+      "Level complete - choose next action": "Nivel completado - elige accion",
+      "Level failed": "Nivel fallado",
+      "Alpha spotted": "Alfa detectado",
+      "You can retry this level or restart the run.": "Puedes reintentar este nivel o reiniciar la partida.",
+      "Retry level": "Reintentar nivel",
+      "Loading assets": "Cargando recursos",
+      "Asset fallback mode": "Modo fallback de recursos",
+      "Some assets were delayed. You can retry or continue with fallback visuals.": "Algunos recursos tardaron en cargar. Puedes reintentar o continuar con visuales de respaldo.",
+      "Retry load": "Reintentar carga",
+      "Fallback mode active": "Modo fallback activo",
+      "Performance mode enabled": "Modo rendimiento activado",
+      "Performance stable": "Rendimiento estable",
+      "Time is up": "Se acabo el tiempo",
+      "Session complete": "Sesion completada",
+      "The 8-minute run ended. Restart to play again.": "La partida de 8 minutos termino. Reinicia para jugar otra vez.",
+    };
+    return map[source] || source;
+  }
+  return source;
+}
+
+function drawIntro() {
+  drawSkyGround();
+  ctx.fillStyle = "rgba(12, 8, 8, 0.7)";
+  ctx.fillRect(0, 0, ui.canvas.width, ui.canvas.height);
+  ctx.fillStyle = "#ffe0e0";
+  ctx.font = "700 48px Oswald";
+  ctx.textAlign = "center";
+  ctx.fillText("ZOMBITE", ui.canvas.width / 2, 180);
+  ctx.font = "700 20px Oswald";
+  ctx.fillStyle = "#ff9e9e";
+  ctx.fillText("SURVIVE THE HORDE", ui.canvas.width / 2, 220);
+}
+
+function draw() {
+  const shake = currentShakeOffset();
+  ctx.save();
+  ctx.translate(shake.x, shake.y);
+  drawSkyGround();
+  drawBloodPools();
+  for (const z of state.zombies) {
+    drawZombie(z);
+  }
+  drawImpacts();
+  drawWeaponFrame();
+  ctx.restore();
+  drawHitMarker();
+}
+
+function drawSkyGround() {
+  const scene = currentScene();
+  const gradient = ctx.createLinearGradient(0, 0, 0, ui.canvas.height);
+  gradient.addColorStop(0, shadeColor(scene.skyTop, -82));
+  gradient.addColorStop(0.46, shadeColor(scene.skyMid, -64));
+  gradient.addColorStop(0.47, shadeColor(scene.groundTop, -52));
+  gradient.addColorStop(1, shadeColor(scene.groundBottom, -46));
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, ui.canvas.width, ui.canvas.height);
+  drawAtmosphericDepth();
+  drawBackFog();
+  drawGroundPlane();
+  if (state.perf.quality === "high") {
+    drawSceneDetails(scene.name);
+  } else {
+    drawSceneLabel(`${scene.name} (Performance)`);
+  }
+  drawShotLightOverlay();
+  drawScreenGrade();
+  drawFilmNoise();
+  drawVignette();
+}
+
+function drawZombie(z) {
+  const horizonY = ui.canvas.height * 0.25;
+  const depth = clamp((z.y - horizonY) / (ui.canvas.height - horizonY), 0, 1);
+  const scale = 0.48 + depth * 1.05;
+  const bodyHeight = ((z.isAlpha ? 148 : 128) + z.radius * 0.45) * scale;
+  const shoulder = (z.isAlpha ? 30 : 24) * scale;
+  const armLength = (z.isAlpha ? 34 : 29) * scale;
+  const legLength = (z.isAlpha ? 46 : 42) * scale;
+  const headRadius = (z.isAlpha ? 14 : 12) * scale;
+  const sprintWeight = z.rush || 0;
+  const strideRate = 0.008 + sprintWeight * 0.006 + (z.isAlpha ? 0.004 : 0);
+  const swing = Math.sin((performance.now() + z.phase) * strideRate) * (6.5 + sprintWeight * 10) * scale;
+  const sideLean = Math.sin((performance.now() + z.phase) * strideRate * 0.5) * (0.03 + sprintWeight * 0.07);
+  const forwardLean = 0.01 + sprintWeight * 0.06;
+  const hurtLife = clamp(z.staggerMs / (z.isAlpha ? 170 : 130), 0, 1);
+  const torsoTop = -bodyHeight * 0.68;
+  const hipY = -bodyHeight * 0.12;
+
+  if (depth <= 0.02) return;
+
+  ctx.save();
+  ctx.translate(z.x, z.y);
+  ctx.fillStyle = "rgba(0, 0, 0, 0.28)";
+  ctx.beginPath();
+  ctx.ellipse(0, legLength * 0.94, shoulder * 1.45, shoulder * 0.44, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.rotate(sideLean + forwardLean + (z.hitTilt || 0));
+  ctx.globalAlpha = 0.8 + depth * 0.2;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.strokeStyle = "rgba(16, 9, 9, 0.95)";
+  ctx.lineWidth = 8 * scale;
+  ctx.beginPath();
+  ctx.moveTo(-shoulder + swing, torsoTop + armLength * 0.36);
+  ctx.lineTo(-shoulder * 1.5 + swing, torsoTop + armLength);
+  ctx.moveTo(shoulder - swing, torsoTop + armLength * 0.36);
+  ctx.lineTo(shoulder * 1.5 - swing, torsoTop + armLength);
+  ctx.stroke();
+
+  ctx.strokeStyle = z.isAlpha ? "#d9c7ad" : "#b7c6ae";
+  ctx.lineWidth = 4.4 * scale;
+  ctx.beginPath();
+  ctx.moveTo(-shoulder + swing, torsoTop + armLength * 0.36);
+  ctx.lineTo(-shoulder * 1.4 + swing, torsoTop + armLength);
+  ctx.moveTo(shoulder - swing, torsoTop + armLength * 0.36);
+  ctx.lineTo(shoulder * 1.4 - swing, torsoTop + armLength);
+  ctx.stroke();
+
+  ctx.strokeStyle = "rgba(12, 8, 8, 0.95)";
+  ctx.lineWidth = 8.4 * scale;
+  ctx.beginPath();
+  ctx.moveTo(-shoulder * 0.2, hipY);
+  ctx.lineTo(-shoulder * 0.45 + swing * 0.35, hipY + legLength);
+  ctx.moveTo(shoulder * 0.2, hipY);
+  ctx.lineTo(shoulder * 0.45 - swing * 0.35, hipY + legLength);
+  ctx.stroke();
+
+  ctx.strokeStyle = z.isAlpha ? "#68574d" : "#5f685f";
+  ctx.lineWidth = 4.8 * scale;
+  ctx.beginPath();
+  ctx.moveTo(-shoulder * 0.2, hipY);
+  ctx.lineTo(-shoulder * 0.45 + swing * 0.35, hipY + legLength);
+  ctx.moveTo(shoulder * 0.2, hipY);
+  ctx.lineTo(shoulder * 0.45 - swing * 0.35, hipY + legLength);
+  ctx.stroke();
+
+  const torsoGrad = ctx.createLinearGradient(0, torsoTop - headRadius, 0, hipY + legLength * 0.4);
+  if (z.isAlpha) {
+    torsoGrad.addColorStop(0, "#6a4b45");
+    torsoGrad.addColorStop(1, "#3c2b29");
+  } else {
+    torsoGrad.addColorStop(0, "#51644b");
+    torsoGrad.addColorStop(1, "#293629");
+  }
+  ctx.fillStyle = torsoGrad;
+  ctx.beginPath();
+  ctx.moveTo(-shoulder * 1.1, torsoTop + shoulder * 0.2);
+  ctx.lineTo(shoulder * 1.1, torsoTop + shoulder * 0.2);
+  ctx.lineTo(shoulder * 0.72, hipY);
+  ctx.lineTo(-shoulder * 0.72, hipY);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "rgba(12, 8, 8, 0.95)";
+  ctx.lineWidth = 2 * scale;
+  ctx.stroke();
+
+  const headGrad = ctx.createRadialGradient(
+    -headRadius * 0.2,
+    torsoTop - headRadius * 0.58,
+    1,
+    0,
+    torsoTop - headRadius * 0.38,
+    headRadius * 1.25,
+  );
+  if (z.isAlpha) {
+    headGrad.addColorStop(0, "#92776f");
+    headGrad.addColorStop(1, "#584842");
+  } else {
+    headGrad.addColorStop(0, "#839277");
+    headGrad.addColorStop(1, "#4f5f4a");
+  }
+  ctx.fillStyle = headGrad;
+  ctx.beginPath();
+  ctx.arc(0, torsoTop - headRadius * 0.4, headRadius, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "rgba(10, 7, 7, 0.95)";
+  ctx.lineWidth = 2 * scale;
+  ctx.stroke();
+
+  ctx.fillStyle = "#120909";
+  ctx.beginPath();
+  ctx.arc(-headRadius * 0.4, torsoTop - headRadius * 0.48, headRadius * 0.18, 0, Math.PI * 2);
+  ctx.arc(headRadius * 0.4, torsoTop - headRadius * 0.48, headRadius * 0.18, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = z.isAlpha ? "#ff624f" : "#c4e89f";
+  ctx.lineWidth = Math.max(1.2, 2.2 * scale);
+  ctx.beginPath();
+  ctx.moveTo(-headRadius * 0.46, torsoTop - headRadius * 0.2);
+  ctx.lineTo(-headRadius * 0.2, torsoTop - headRadius * 0.14);
+  ctx.moveTo(headRadius * 0.46, torsoTop - headRadius * 0.2);
+  ctx.lineTo(headRadius * 0.2, torsoTop - headRadius * 0.14);
+  ctx.stroke();
+  ctx.strokeStyle = z.isAlpha ? "#e75744" : "#b6db93";
+  ctx.lineWidth = Math.max(1.2, 1.8 * scale);
+  ctx.beginPath();
+  ctx.moveTo(-headRadius * 0.52, torsoTop + headRadius * 0.22);
+  ctx.quadraticCurveTo(0, torsoTop + headRadius * 0.48, headRadius * 0.52, torsoTop + headRadius * 0.22);
+  ctx.stroke();
+  if (hurtLife > 0) {
+    ctx.strokeStyle = `rgba(255, 138, 118, ${0.18 + hurtLife * 0.42})`;
+    ctx.lineWidth = 2.6 * scale;
+    ctx.beginPath();
+    ctx.ellipse(0, hipY * 0.24, shoulder * 1.45, bodyHeight * 0.55, 0, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  if (z.isAlpha) {
+    ctx.strokeStyle = "rgba(255, 102, 80, 0.88)";
+    ctx.lineWidth = 2.8 * scale;
+    ctx.beginPath();
+    ctx.ellipse(0, hipY * 0.2, shoulder * 1.8, bodyHeight * 0.62, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = "rgba(255, 225, 193, 0.95)";
+    ctx.font = `${Math.max(10, 11 * scale)}px Oswald`;
+    ctx.textAlign = "center";
+    ctx.fillText("ALPHA", 0, torsoTop - headRadius * 2.1);
+  }
+  ctx.restore();
+}
+
+function drawWeaponFrame() {
+  if (state.perf.quality === "low") return;
+  const h = ui.canvas.height;
+  const w = ui.canvas.width;
+  const pulse = 0.06 + Math.sin(performance.now() * 0.0032) * 0.04;
+  const recoil = state.weapon.recoil;
+  const swayX = state.weapon.swayX;
+  const swayY = state.weapon.swayY;
+  const bob = Math.sin(performance.now() * 0.0045) * 0.005;
+
+  ctx.save();
+  ctx.translate(w * (recoil * 0.022 + swayX * 0.025), h * (recoil * 0.016 + swayY * 0.022 + bob));
+  ctx.rotate(-recoil * 0.056 + swayX * 0.03);
+
+  // Drop shadow under the weapon.
+  ctx.fillStyle = "rgba(0, 0, 0, 0.32)";
+  ctx.beginPath();
+  ctx.moveTo(w * 0.59, h * 0.98);
+  ctx.lineTo(w * 0.82, h * 0.83);
+  ctx.lineTo(w, h * 0.87);
+  ctx.lineTo(w, h);
+  ctx.lineTo(w * 0.62, h);
+  ctx.closePath();
+  ctx.fill();
+
+  // Receiver + rear block.
+  ctx.fillStyle = "rgba(14, 20, 28, 0.95)";
+  ctx.beginPath();
+  ctx.moveTo(w * 0.61, h);
+  ctx.lineTo(w * 0.72, h * 0.74);
+  ctx.lineTo(w * 0.95, h * 0.7);
+  ctx.lineTo(w, h * 0.82);
+  ctx.lineTo(w, h);
+  ctx.closePath();
+  ctx.fill();
+
+  // Main body and barrel sleeve.
+  ctx.fillStyle = "rgba(34, 44, 58, 0.97)";
+  ctx.fillRect(w * 0.64, h * 0.67, w * 0.34, h * 0.1);
+  ctx.fillStyle = "rgba(86, 102, 123, 0.86)";
+  ctx.fillRect(w * 0.69, h * 0.695, w * 0.22, h * 0.043);
+  const reflection = ctx.createLinearGradient(w * 0.64, h * 0.67, w * 0.64, h * 0.77);
+  reflection.addColorStop(0, "rgba(232, 241, 255, 0.14)");
+  reflection.addColorStop(0.4, "rgba(232, 241, 255, 0.03)");
+  reflection.addColorStop(1, "rgba(232, 241, 255, 0)");
+  ctx.fillStyle = reflection;
+  ctx.fillRect(w * 0.64, h * 0.67, w * 0.34, h * 0.1);
+
+  // Barrel tube (front right).
+  const tube = ctx.createLinearGradient(w * 0.86, h * 0.68, w, h * 0.76);
+  tube.addColorStop(0, "rgba(126, 141, 162, 0.92)");
+  tube.addColorStop(0.5, "rgba(54, 67, 84, 0.95)");
+  tube.addColorStop(1, "rgba(17, 24, 35, 0.96)");
+  ctx.fillStyle = tube;
+  ctx.beginPath();
+  ctx.ellipse(w * 0.965, h * 0.72, w * 0.07, h * 0.085, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "rgba(10, 15, 22, 0.92)";
+  ctx.beginPath();
+  ctx.ellipse(w * 0.97, h * 0.72, w * 0.028, h * 0.037, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Sight ring and reticle on weapon.
+  ctx.strokeStyle = "rgba(209, 228, 255, 0.79)";
+  ctx.lineWidth = 4.2;
+  ctx.beginPath();
+  ctx.arc(w * 0.79, h * 0.72, h * 0.035, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(w * 0.79 - h * 0.014, h * 0.72);
+  ctx.lineTo(w * 0.79 + h * 0.014, h * 0.72);
+  ctx.moveTo(w * 0.79, h * 0.72 - h * 0.014);
+  ctx.lineTo(w * 0.79, h * 0.72 + h * 0.014);
+  ctx.stroke();
+
+  // Tactical stripes and readout lights.
+  ctx.fillStyle = "rgba(255, 206, 111, 0.8)";
+  ctx.fillRect(w * 0.67, h * 0.76, w * 0.1, 3);
+  ctx.fillRect(w * 0.67, h * 0.772, w * 0.066, 2);
+  ctx.fillStyle = `rgba(111, 232, 255, ${0.25 + pulse})`;
+  ctx.fillRect(w * 0.84, h * 0.705, w * 0.07, 2);
+  ctx.fillStyle = `rgba(255, 116, 86, ${0.14 + recoil * 0.12})`;
+  ctx.fillRect(w * 0.92, h * 0.707, w * 0.026, 2);
+
+  // Player forearm silhouette.
+  const armGrad = ctx.createLinearGradient(w * 0.56, h * 0.84, w * 0.69, h);
+  armGrad.addColorStop(0, "rgba(158, 122, 90, 0.88)");
+  armGrad.addColorStop(1, "rgba(103, 76, 58, 0.9)");
+  ctx.fillStyle = armGrad;
+  ctx.beginPath();
+  ctx.moveTo(w * 0.56, h);
+  ctx.lineTo(w * 0.62, h * 0.87);
+  ctx.lineTo(w * 0.7, h * 0.84);
+  ctx.lineTo(w * 0.69, h);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "rgba(230, 198, 166, 0.22)";
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.moveTo(w * 0.61, h * 0.88);
+  ctx.lineTo(w * 0.68, h * 0.86);
+  ctx.stroke();
+
+  ctx.strokeStyle = "rgba(214, 232, 255, 0.24)";
+  ctx.lineWidth = 2.2;
+  ctx.strokeRect(w * 0.64, h * 0.67, w * 0.34, h * 0.1);
+  ctx.restore();
+}
+
+function currentScene() {
+  const idx = clamp(state.level, 1, MAX_LEVEL) - 1;
+  return LEVEL_SCENES[idx];
+}
+
+function currentProfile() {
+  const scene = currentScene();
+  return SCENE_PROFILE[scene.name] || SCENE_PROFILE.City;
+}
+
+function drawSceneDetails(sceneName) {
+  if (sceneName === "Laundromat") {
+    drawLaundromatInterior();
+    return;
+  }
+  if (sceneName === "City") {
+    drawCityBlocks();
+    return;
+  }
+  if (sceneName === "Factory") {
+    drawFactorySilhouette();
+    return;
+  }
+  if (sceneName === "Countryside") {
+    drawCountrysideHills();
+    return;
+  }
+  if (sceneName === "Highway") {
+    drawHighwayOverpass();
+    return;
+  }
+  if (sceneName === "Harbor") {
+    drawHarborDocks();
+    return;
+  }
+  if (sceneName === "Subway") {
+    drawSubwayTunnel();
+    return;
+  }
+  if (sceneName === "Mall") {
+    drawMallFacade();
+    return;
+  }
+  if (sceneName === "Hospital") {
+    drawHospitalBlock();
+    return;
+  }
+  if (sceneName === "Airport") {
+    drawAirportRunway();
+    return;
+  }
+  if (sceneName === "Bunker") {
+    drawBunkerEntrance();
+    return;
+  }
+  drawSceneLabel(sceneName);
+}
+
+function drawLaundromatInterior() {
+  const h = ui.canvas.height;
+  const w = ui.canvas.width;
+
+  // Side walls and tunnel perspective.
+  const wallTint = ctx.createLinearGradient(0, h * 0.38, 0, h * 0.84);
+  wallTint.addColorStop(0, "rgba(118, 107, 68, 0.64)");
+  wallTint.addColorStop(1, "rgba(40, 34, 24, 0.76)");
+  ctx.fillStyle = wallTint;
+  ctx.beginPath();
+  ctx.moveTo(0, h * 0.52);
+  ctx.lineTo(w * 0.23, h * 0.54);
+  ctx.lineTo(w * 0.38, h * 0.72);
+  ctx.lineTo(0, h * 0.76);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(w, h * 0.52);
+  ctx.lineTo(w * 0.77, h * 0.54);
+  ctx.lineTo(w * 0.62, h * 0.72);
+  ctx.lineTo(w, h * 0.76);
+  ctx.closePath();
+  ctx.fill();
+
+  // Corridor cavity.
+  const corridor = ctx.createLinearGradient(w * 0.5, h * 0.4, w * 0.5, h * 0.86);
+  corridor.addColorStop(0, "rgba(36, 28, 26, 0.25)");
+  corridor.addColorStop(0.36, "rgba(28, 20, 19, 0.72)");
+  corridor.addColorStop(1, "rgba(15, 11, 11, 0.86)");
+  ctx.fillStyle = corridor;
+  ctx.fillRect(w * 0.29, h * 0.43, w * 0.42, h * 0.37);
+
+  // Open door frames.
+  ctx.fillStyle = "rgba(72, 36, 30, 0.86)";
+  ctx.fillRect(w * 0.21, h * 0.42, 20, h * 0.34);
+  ctx.fillRect(w * 0.77, h * 0.42, 20, h * 0.34);
+  const doorLight = ctx.createLinearGradient(0, h * 0.46, 0, h * 0.74);
+  doorLight.addColorStop(0, "rgba(223, 216, 194, 0.86)");
+  doorLight.addColorStop(1, "rgba(182, 171, 149, 0.54)");
+  ctx.fillStyle = doorLight;
+  ctx.fillRect(w * 0.23, h * 0.46, w * 0.11, h * 0.28);
+  ctx.fillRect(w * 0.66, h * 0.46, w * 0.11, h * 0.28);
+
+  // Laundromat sign.
+  ctx.fillStyle = "rgba(35, 70, 72, 0.9)";
+  ctx.fillRect(w * 0.27, h * 0.175, w * 0.46, h * 0.125);
+  ctx.fillStyle = "rgba(235, 198, 95, 0.9)";
+  ctx.fillRect(w * 0.28, h * 0.185, w * 0.44, h * 0.105);
+  ctx.strokeStyle = "rgba(25, 36, 42, 0.6)";
+  ctx.lineWidth = 4;
+  ctx.strokeRect(w * 0.28, h * 0.185, w * 0.44, h * 0.105);
+  ctx.fillStyle = "rgba(192, 33, 31, 0.96)";
+  ctx.font = "700 50px Oswald";
+  ctx.textAlign = "center";
+  ctx.fillText("LAUNDROMAT", w * 0.5, h * 0.265);
+  ctx.fillStyle = "rgba(39, 46, 55, 0.72)";
+  ctx.font = "700 16px Oswald";
+  ctx.fillText("SELF SERVICE", w * 0.5, h * 0.292);
+
+  // Warm center light.
+  const light = ctx.createRadialGradient(w * 0.5, h * 0.47, 14, w * 0.5, h * 0.58, h * 0.36);
+  light.addColorStop(0, "rgba(255, 248, 196, 0.78)");
+  light.addColorStop(0.42, "rgba(255, 175, 86, 0.36)");
+  light.addColorStop(1, "rgba(0, 0, 0, 0)");
+  ctx.fillStyle = light;
+  ctx.fillRect(0, 0, w, h);
+
+  // Floor tiles with perspective lines.
+  const floorTop = h * 0.67;
+  for (let row = 0; row < 8; row += 1) {
+    const t0 = row / 8;
+    const t1 = (row + 1) / 8;
+    const y0 = floorTop + (h - floorTop) * Math.pow(t0, 1.25);
+    const y1 = floorTop + (h - floorTop) * Math.pow(t1, 1.25);
+    const inset0 = w * 0.5 * (1 - t0) * 0.36;
+    const inset1 = w * 0.5 * (1 - t1) * 0.36;
+    const columns = 10;
+    for (let col = 0; col < columns; col += 1) {
+      const x0a = inset0 + ((w - inset0 * 2) * col) / columns;
+      const x0b = inset0 + ((w - inset0 * 2) * (col + 1)) / columns;
+      const x1a = inset1 + ((w - inset1 * 2) * col) / columns;
+      const x1b = inset1 + ((w - inset1 * 2) * (col + 1)) / columns;
+      ctx.beginPath();
+      ctx.moveTo(x0a, y0);
+      ctx.lineTo(x0b, y0);
+      ctx.lineTo(x1b, y1);
+      ctx.lineTo(x1a, y1);
+      ctx.closePath();
+      const dark = (row + col) % 2 === 0;
+      ctx.fillStyle = dark ? "rgba(95, 77, 52, 0.4)" : "rgba(146, 118, 80, 0.34)";
+      ctx.fill();
+    }
+  }
+
+  // Washer blocks at left.
+  for (let i = 0; i < 3; i += 1) {
+    const x = 24 + i * 84;
+    const y = h * 0.62;
+    const body = ctx.createLinearGradient(x, y, x, y + h * 0.18);
+    body.addColorStop(0, "rgba(147, 154, 161, 0.64)");
+    body.addColorStop(1, "rgba(78, 86, 94, 0.58)");
+    ctx.fillStyle = body;
+    ctx.fillRect(x, y, 76, h * 0.18);
+    ctx.strokeStyle = "rgba(197, 215, 220, 0.3)";
+    ctx.strokeRect(x + 11, y + h * 0.04, 48, 48);
+    ctx.fillStyle = "rgba(24, 31, 37, 0.58)";
+    ctx.beginPath();
+    ctx.arc(x + 35, y + h * 0.08, 13, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  drawSceneLabel("Laundromat");
+}
+
+function drawCityBlocks() {
+  const h = ui.canvas.height;
+  const yBase = h * 0.56;
+  ctx.fillStyle = "rgba(18, 24, 33, 0.55)";
+  for (let x = 30; x < ui.canvas.width; x += 120) {
+    const bw = 66 + ((x / 10) % 36);
+    const bh = 90 + ((x / 7) % 120);
+    ctx.fillRect(x, yBase - bh, bw, bh);
+  }
+  drawSceneLabel("City");
+}
+
+function drawFactorySilhouette() {
+  const h = ui.canvas.height;
+  const y = h * 0.57;
+  ctx.fillStyle = "rgba(28, 26, 24, 0.62)";
+  ctx.fillRect(0, y, ui.canvas.width, h - y);
+  ctx.fillRect(120, y - 130, 210, 130);
+  ctx.fillRect(370, y - 85, 260, 85);
+  ctx.fillRect(700, y - 110, 180, 110);
+  ctx.fillRect(930, y - 95, 210, 95);
+  ctx.fillRect(230, y - 190, 40, 190);
+  ctx.fillRect(790, y - 170, 36, 170);
+  drawSceneLabel("Factory");
+}
+
+function drawCountrysideHills() {
+  const h = ui.canvas.height;
+  ctx.fillStyle = "rgba(35, 73, 42, 0.6)";
+  ctx.beginPath();
+  ctx.moveTo(0, h * 0.6);
+  ctx.quadraticCurveTo(ui.canvas.width * 0.25, h * 0.5, ui.canvas.width * 0.5, h * 0.6);
+  ctx.quadraticCurveTo(ui.canvas.width * 0.75, h * 0.68, ui.canvas.width, h * 0.58);
+  ctx.lineTo(ui.canvas.width, h);
+  ctx.lineTo(0, h);
+  ctx.closePath();
+  ctx.fill();
+  drawSceneLabel("Countryside");
+}
+
+function drawHighwayOverpass() {
+  const h = ui.canvas.height;
+  ctx.fillStyle = "rgba(33, 36, 44, 0.62)";
+  ctx.fillRect(0, h * 0.64, ui.canvas.width, h * 0.36);
+  ctx.fillRect(0, h * 0.58, ui.canvas.width, 14);
+  for (let x = 0; x < ui.canvas.width; x += 120) {
+    ctx.fillRect(x + 16, h * 0.58, 10, 70);
+  }
+  ctx.fillStyle = "rgba(223, 233, 242, 0.45)";
+  for (let x = 36; x < ui.canvas.width; x += 80) {
+    ctx.fillRect(x, h * 0.69, 34, 4);
+  }
+  drawSceneLabel("Highway");
+}
+
+function drawHarborDocks() {
+  const h = ui.canvas.height;
+  ctx.fillStyle = "rgba(24, 44, 58, 0.6)";
+  ctx.fillRect(0, h * 0.66, ui.canvas.width, h * 0.34);
+  ctx.fillStyle = "rgba(55, 73, 82, 0.68)";
+  ctx.fillRect(80, h * 0.58, 280, 26);
+  ctx.fillRect(430, h * 0.61, 320, 26);
+  ctx.fillRect(820, h * 0.56, 280, 26);
+  ctx.fillRect(160, h * 0.46, 12, 130);
+  ctx.fillRect(520, h * 0.43, 12, 150);
+  ctx.fillRect(930, h * 0.4, 12, 160);
+  drawSceneLabel("Harbor");
+}
+
+function drawSubwayTunnel() {
+  const h = ui.canvas.height;
+  const w = ui.canvas.width;
+  ctx.fillStyle = "rgba(28, 30, 37, 0.66)";
+  ctx.beginPath();
+  ctx.moveTo(0, h);
+  ctx.lineTo(0, h * 0.58);
+  ctx.quadraticCurveTo(w * 0.5, h * 0.24, w, h * 0.58);
+  ctx.lineTo(w, h);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "rgba(198, 208, 220, 0.33)";
+  ctx.lineWidth = 2;
+  for (let i = 0; i < 7; i += 1) {
+    const y = h * (0.62 + i * 0.05);
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(w, y);
+    ctx.stroke();
+  }
+  drawSceneLabel("Subway");
+}
+
+function drawMallFacade() {
+  const h = ui.canvas.height;
+  const y = h * 0.54;
+  ctx.fillStyle = "rgba(67, 58, 70, 0.62)";
+  ctx.fillRect(60, y - 110, ui.canvas.width - 120, 170);
+  ctx.fillStyle = "rgba(198, 210, 225, 0.28)";
+  for (let x = 100; x < ui.canvas.width - 100; x += 90) {
+    ctx.fillRect(x, y - 80, 60, 50);
+  }
+  ctx.fillStyle = "rgba(40, 36, 44, 0.72)";
+  ctx.fillRect(0, y + 60, ui.canvas.width, h - y);
+  drawSceneLabel("Mall");
+}
+
+function drawHospitalBlock() {
+  const h = ui.canvas.height;
+  const cx = ui.canvas.width * 0.5;
+  const y = h * 0.56;
+  ctx.fillStyle = "rgba(64, 82, 92, 0.64)";
+  ctx.fillRect(cx - 220, y - 150, 440, 190);
+  ctx.fillRect(cx - 60, y - 200, 120, 240);
+  ctx.fillStyle = "rgba(215, 230, 236, 0.4)";
+  ctx.fillRect(cx - 10, y - 185, 20, 80);
+  ctx.fillRect(cx - 45, y - 150, 90, 20);
+  ctx.fillStyle = "rgba(42, 55, 62, 0.7)";
+  ctx.fillRect(0, y + 40, ui.canvas.width, h - y);
+  drawSceneLabel("Hospital");
+}
+
+function drawAirportRunway() {
+  const h = ui.canvas.height;
+  const w = ui.canvas.width;
+  ctx.fillStyle = "rgba(50, 58, 65, 0.68)";
+  ctx.beginPath();
+  ctx.moveTo(w * 0.3, h * 0.55);
+  ctx.lineTo(w * 0.7, h * 0.55);
+  ctx.lineTo(w, h);
+  ctx.lineTo(0, h);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = "rgba(232, 238, 244, 0.48)";
+  for (let y = h * 0.62; y < h * 0.95; y += 28) {
+    ctx.fillRect(w * 0.49, y, w * 0.02, 12);
+  }
+  ctx.fillStyle = "rgba(62, 76, 86, 0.62)";
+  ctx.fillRect(80, h * 0.5, 260, 30);
+  ctx.fillRect(920, h * 0.5, 260, 30);
+  drawSceneLabel("Airport");
+}
+
+function drawBunkerEntrance() {
+  const h = ui.canvas.height;
+  const w = ui.canvas.width;
+  ctx.fillStyle = "rgba(43, 46, 54, 0.74)";
+  ctx.fillRect(0, h * 0.62, w, h * 0.38);
+  ctx.beginPath();
+  ctx.moveTo(w * 0.28, h * 0.62);
+  ctx.lineTo(w * 0.42, h * 0.48);
+  ctx.lineTo(w * 0.58, h * 0.48);
+  ctx.lineTo(w * 0.72, h * 0.62);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = "rgba(20, 24, 31, 0.9)";
+  ctx.beginPath();
+  ctx.moveTo(w * 0.42, h * 0.62);
+  ctx.lineTo(w * 0.5, h * 0.53);
+  ctx.lineTo(w * 0.58, h * 0.62);
+  ctx.closePath();
+  ctx.fill();
+  drawSceneLabel("Bunker");
+}
+
+function drawSceneLabel(sceneName) {
+  ctx.fillStyle = "rgba(255, 207, 207, 0.8)";
+  ctx.font = "700 20px Oswald";
+  ctx.textAlign = "left";
+  ctx.fillText(sceneName, 20, 36);
+}
+
+function canvasPoint(event) {
+  const rect = ui.canvas.getBoundingClientRect();
+  return {
+    x: ((event.clientX - rect.left) / rect.width) * ui.canvas.width,
+    y: ((event.clientY - rect.top) / rect.height) * ui.canvas.height,
+  };
+}
+
+function initializeCrosshair() {
+  if (IS_COARSE_POINTER) {
+    ui.crosshair.classList.add("active");
+    requestAnimationFrame(() => {
+      snapCrosshairToCenter();
+      syncCrosshairOverlay();
+    });
+    return;
+  }
+  ui.crosshair.classList.add("active");
+  requestAnimationFrame(() => {
+    snapCrosshairToCenter();
+    syncCrosshairOverlay();
+  });
+}
+
+function snapCrosshairToCenter() {
+  const rect = ui.canvas.getBoundingClientRect();
+  const x = rect.width * 0.5;
+  const y = rect.height * 0.5;
+  state.pointer.x = ui.canvas.width * 0.5;
+  state.pointer.y = ui.canvas.height * 0.5;
+  state.weapon.swayTargetX = 0;
+  state.weapon.swayTargetY = 0;
+  ui.crosshair.style.left = `${x}px`;
+  ui.crosshair.style.top = `${y}px`;
+}
+
+function moveCrosshair(event) {
+  if (IS_COARSE_POINTER) {
+    return;
+  }
+  const rect = ui.canvas.getBoundingClientRect();
+  const x = event.clientX - rect.left;
+  const y = event.clientY - rect.top;
+  const normalizedX = clamp((x / rect.width) * 2 - 1, -1, 1);
+  const normalizedY = clamp((y / rect.height) * 2 - 1, -1, 1);
+  state.weapon.swayTargetX = normalizedX;
+  state.weapon.swayTargetY = normalizedY;
+  ui.crosshair.style.left = `${x}px`;
+  ui.crosshair.style.top = `${y}px`;
+}
+
+function syncCrosshairOverlay() {
+  const spread = 8 + state.weapon.recoil * 14;
+  ui.crosshair.style.setProperty("--spread", `${spread.toFixed(2)}px`);
+  ui.crosshair.classList.toggle("hit", state.hitMarker.ttl > 0);
+  if (IS_COARSE_POINTER) {
+    const rect = ui.canvas.getBoundingClientRect();
+    ui.crosshair.style.left = `${rect.width * 0.5}px`;
+    ui.crosshair.style.top = `${rect.height * 0.5}px`;
+  }
+}
+
+function flashMuzzle() {
+  ui.muzzleFlash.classList.remove("active");
+  void ui.muzzleFlash.offsetWidth;
+  ui.muzzleFlash.classList.add("active");
+  ui.crosshair.classList.remove("shot");
+  void ui.crosshair.offsetWidth;
+  ui.crosshair.classList.add("shot");
+  setTimeout(() => {
+    ui.crosshair.classList.remove("shot");
+  }, 90);
+}
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function addImpact(x, y, tone) {
+  const sparks = [];
+  const sparkCount = 5 + Math.floor(Math.random() * 4);
+  for (let i = 0; i < sparkCount; i += 1) {
+    sparks.push({
+      angle: Math.random() * Math.PI * 2,
+      length: 8 + Math.random() * 16,
+      width: 0.9 + Math.random() * 1.1,
+    });
+  }
+  state.impacts.push({
+    x,
+    y,
+    color: tone,
+    ttl: 140,
+    ringMax: 18 + Math.random() * 14,
+    sparks,
+  });
+  if (state.impacts.length > 24) state.impacts.shift();
+}
+
+function addBloodPool(x, y, isAlpha) {
+  state.bloodPools.push({
+    x,
+    y: y + (isAlpha ? 8 : 5),
+    radius: isAlpha ? 36 : 24,
+    ttl: isAlpha ? 7000 : 5200,
+    tone: isAlpha ? "rgba(130, 12, 12, 0.55)" : "rgba(120, 10, 10, 0.5)",
+  });
+  if (state.bloodPools.length > 36) state.bloodPools.shift();
+}
+
+function drawBloodPools() {
+  for (const pool of state.bloodPools) {
+    const life = clamp(pool.ttl / 7000, 0, 1);
+    const fade = life < 0.28 ? life / 0.28 : 1;
+    const spread = pool.radius * (1.45 - life * 0.4);
+    ctx.save();
+    ctx.globalAlpha = fade;
+    ctx.fillStyle = pool.tone;
+    ctx.beginPath();
+    ctx.ellipse(pool.x, pool.y + 4, spread, spread * 0.42, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "rgba(30, 3, 3, 0.22)";
+    ctx.beginPath();
+    ctx.ellipse(pool.x + spread * 0.12, pool.y + 5, spread * 0.45, spread * 0.2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+function applyZombieImpactReaction(z, point) {
+  const muzzleX = ui.canvas.width * (0.74 + state.weapon.swayX * 0.02);
+  const muzzleY = ui.canvas.height * (0.8 + state.weapon.swayY * 0.015);
+  let vectorX = z.x - muzzleX;
+  let vectorY = z.y - muzzleY;
+  const length = Math.hypot(vectorX, vectorY) || 1;
+  vectorX /= length;
+  vectorY /= length;
+  const mass = z.isAlpha ? 0.88 : 1;
+  z.knockbackX += vectorX * 4.2 * mass;
+  z.knockbackY += vectorY * 5.1 * mass;
+  z.staggerMs = Math.max(z.staggerMs, z.isAlpha ? 170 : 130);
+  const side = point.x >= z.x ? 1 : -1;
+  z.hitTilt = clamp(z.hitTilt + side * 0.09 * mass, -0.32, 0.32);
+}
+
+function triggerDamageOverlay(amount) {
+  const normalized = clamp(amount / 24, 0.24, 1);
+  state.damageFx.ttl = Math.max(state.damageFx.ttl, 380 + normalized * 240);
+  state.damageFx.intensity = Math.max(state.damageFx.intensity, 0.35 + normalized * 0.65);
+  state.damageFx.pulse = 0;
+}
+
+function triggerHitStop(strength = 0.5, mode = "normal") {
+  const profile = HIT_STOP_PROFILE[mode] || HIT_STOP_PROFILE.normal;
+  const power = clamp(strength, 0.2, 1);
+  const ttl = profile.baseMs + power * profile.spanMs;
+  if (ttl >= state.hitStop.ttl || state.hitStop.mode === "none") {
+    state.hitStop.mode = mode;
+    state.hitStop.maxTtl = ttl;
+  }
+  state.hitStop.ttl = Math.max(state.hitStop.ttl, ttl);
+  state.hitStop.maxTtl = Math.max(state.hitStop.maxTtl, state.hitStop.ttl);
+  state.hitStop.intensity = Math.max(state.hitStop.intensity, power * profile.powerScale);
+}
+
+function applyPlayerDamage(amount) {
+  state.health -= amount;
+  triggerDamageOverlay(amount);
+  startCameraShake(170, 5.8);
+  playDamageSound();
+}
+
+function startCameraShake(durationMs, intensity) {
+  state.camera.shakeMs = Math.max(state.camera.shakeMs, durationMs);
+  state.camera.intensity = Math.max(state.camera.intensity, intensity);
+}
+
+function currentShakeOffset() {
+  if (state.camera.shakeMs <= 0) return { x: 0, y: 0 };
+  const phase = state.camera.shakeMs / 180;
+  const strength = state.camera.intensity * Math.max(0.1, phase);
+  return {
+    x: (Math.random() * 2 - 1) * strength,
+    y: (Math.random() * 2 - 1) * strength,
+  };
+}
+
+function drawImpacts() {
+  for (const hit of state.impacts) {
+    const life = clamp(hit.ttl / 140, 0, 1);
+    const radius = 4 + (1 - life) * hit.ringMax;
+    ctx.save();
+    ctx.globalAlpha = life * 0.84;
+    ctx.strokeStyle = hit.color;
+    ctx.lineWidth = 1.4 + life * 1.1;
+    ctx.beginPath();
+    ctx.arc(hit.x, hit.y, radius, 0, Math.PI * 2);
+    ctx.stroke();
+
+    for (const spark of hit.sparks) {
+      const sparkLife = 0.6 + life * 0.4;
+      const inner = radius * 0.3;
+      const outer = inner + spark.length * (1 - life * 0.1);
+      const x1 = hit.x + Math.cos(spark.angle) * inner;
+      const y1 = hit.y + Math.sin(spark.angle) * inner;
+      const x2 = hit.x + Math.cos(spark.angle) * outer;
+      const y2 = hit.y + Math.sin(spark.angle) * outer;
+      ctx.globalAlpha = sparkLife * 0.85;
+      ctx.lineWidth = spark.width;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+    }
+
+    ctx.globalAlpha = life * 0.65;
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(hit.x - radius, hit.y);
+    ctx.lineTo(hit.x + radius, hit.y);
+    ctx.moveTo(hit.x, hit.y - radius);
+    ctx.lineTo(hit.x, hit.y + radius);
+    ctx.moveTo(hit.x - radius * 0.7, hit.y - radius * 0.7);
+    ctx.lineTo(hit.x + radius * 0.7, hit.y + radius * 0.7);
+    ctx.moveTo(hit.x - radius * 0.7, hit.y + radius * 0.7);
+    ctx.lineTo(hit.x + radius * 0.7, hit.y - radius * 0.7);
+    ctx.stroke();
+    ctx.fillStyle = "rgba(255, 219, 175, 0.42)";
+    ctx.beginPath();
+    ctx.arc(hit.x, hit.y, Math.max(1.4, radius * 0.12), 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+function triggerHitMarker(tone = "normal") {
+  state.hitMarker.ttl = tone === "alpha" || tone === "alpha_kill" ? 170 : 120;
+  state.hitMarker.tone = tone;
+}
+
+function drawHitMarker() {
+  if (state.hitMarker.ttl <= 0) return;
+  const h = ui.canvas.height;
+  const w = ui.canvas.width;
+  const maxTtl = state.hitMarker.tone === "alpha" || state.hitMarker.tone === "alpha_kill" ? 170 : 120;
+  const life = clamp(state.hitMarker.ttl / maxTtl, 0, 1);
+  const spread = 10 + (1 - life) * 8;
+  const inner = 5 + (1 - life) * 2;
+  const alpha = 0.3 + life * 0.65;
+  const hue =
+    state.hitMarker.tone === "alpha" || state.hitMarker.tone === "alpha_kill"
+      ? `rgba(255, 203, 141, ${alpha})`
+      : `rgba(242, 246, 255, ${alpha})`;
+
+  ctx.save();
+  ctx.strokeStyle = hue;
+  ctx.lineWidth = 2.4;
+  ctx.beginPath();
+  ctx.moveTo(w / 2 - spread, h / 2 - spread);
+  ctx.lineTo(w / 2 - inner, h / 2 - inner);
+  ctx.moveTo(w / 2 + spread, h / 2 - spread);
+  ctx.lineTo(w / 2 + inner, h / 2 - inner);
+  ctx.moveTo(w / 2 - spread, h / 2 + spread);
+  ctx.lineTo(w / 2 - inner, h / 2 + inner);
+  ctx.moveTo(w / 2 + spread, h / 2 + spread);
+  ctx.lineTo(w / 2 + inner, h / 2 + inner);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawGroundPlane() {
+  const horizon = ui.canvas.height * 0.52;
+  const w = ui.canvas.width;
+  const h = ui.canvas.height;
+  ctx.save();
+  for (let row = 0; row < 13; row += 1) {
+    const t0 = row / 13;
+    const t1 = (row + 1) / 13;
+    const y0 = horizon + (h - horizon) * Math.pow(t0, 1.46);
+    const y1 = horizon + (h - horizon) * Math.pow(t1, 1.46);
+    const inset0 = w * 0.5 * (1 - t0) * 0.92;
+    const inset1 = w * 0.5 * (1 - t1) * 0.92;
+    const strips = 14;
+    for (let col = 0; col < strips; col += 1) {
+      const dark = (row + col) % 2 === 0;
+      const x0a = inset0 + ((w - inset0 * 2) * col) / strips;
+      const x0b = inset0 + ((w - inset0 * 2) * (col + 1)) / strips;
+      const x1a = inset1 + ((w - inset1 * 2) * col) / strips;
+      const x1b = inset1 + ((w - inset1 * 2) * (col + 1)) / strips;
+      ctx.beginPath();
+      ctx.moveTo(x0a, y0);
+      ctx.lineTo(x0b, y0);
+      ctx.lineTo(x1b, y1);
+      ctx.lineTo(x1a, y1);
+      ctx.closePath();
+      ctx.fillStyle = dark ? "rgba(42, 36, 30, 0.22)" : "rgba(118, 104, 84, 0.18)";
+      ctx.fill();
+    }
+    ctx.strokeStyle = "rgba(255, 204, 150, 0.06)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(inset0, y0);
+    ctx.lineTo(w - inset0, y0);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawAtmosphericDepth() {
+  const h = ui.canvas.height;
+  const w = ui.canvas.width;
+  const topGlow = ctx.createRadialGradient(w * 0.52, h * 0.28, 20, w * 0.52, h * 0.28, h * 0.72);
+  topGlow.addColorStop(0, "rgba(255, 219, 152, 0.2)");
+  topGlow.addColorStop(0.48, "rgba(255, 147, 82, 0.1)");
+  topGlow.addColorStop(1, "rgba(0, 0, 0, 0)");
+  ctx.fillStyle = topGlow;
+  ctx.fillRect(0, 0, w, h);
+
+  const edgeShade = ctx.createLinearGradient(0, 0, w, 0);
+  edgeShade.addColorStop(0, "rgba(6, 8, 12, 0.26)");
+  edgeShade.addColorStop(0.16, "rgba(6, 8, 12, 0)");
+  edgeShade.addColorStop(0.84, "rgba(6, 8, 12, 0)");
+  edgeShade.addColorStop(1, "rgba(6, 8, 12, 0.32)");
+  ctx.fillStyle = edgeShade;
+  ctx.fillRect(0, 0, w, h);
+}
+
+function drawBackFog() {
+  const fog = ctx.createLinearGradient(0, ui.canvas.height * 0.2, 0, ui.canvas.height * 0.75);
+  fog.addColorStop(0, "rgba(112, 31, 31, 0.04)");
+  fog.addColorStop(0.55, "rgba(27, 18, 18, 0.17)");
+  fog.addColorStop(1, "rgba(9, 6, 6, 0.38)");
+  ctx.fillStyle = fog;
+  ctx.fillRect(0, 0, ui.canvas.width, ui.canvas.height);
+}
+
+function drawScreenGrade() {
+  const w = ui.canvas.width;
+  const h = ui.canvas.height;
+  const warm = ctx.createLinearGradient(0, 0, 0, h);
+  warm.addColorStop(0, "rgba(255, 178, 120, 0.06)");
+  warm.addColorStop(0.45, "rgba(255, 150, 90, 0.03)");
+  warm.addColorStop(1, "rgba(56, 94, 122, 0.05)");
+  ctx.fillStyle = warm;
+  ctx.fillRect(0, 0, w, h);
+}
+
+function drawShotLightOverlay() {
+  if (state.weapon.shotLightTtl <= 0) return;
+  const h = ui.canvas.height;
+  const w = ui.canvas.width;
+  const life = clamp(state.weapon.shotLightTtl / 130, 0, 1);
+  const flicker = 0.88 + Math.random() * 0.22;
+  const muzzleX = w * (0.74 + state.weapon.swayX * 0.02);
+  const muzzleY = h * (0.8 + state.weapon.swayY * 0.015);
+
+  const radial = ctx.createRadialGradient(muzzleX, muzzleY, 10, muzzleX, muzzleY, h * 0.5);
+  radial.addColorStop(0, `rgba(255, 246, 196, ${0.34 * life * flicker})`);
+  radial.addColorStop(0.3, `rgba(255, 203, 132, ${0.2 * life * flicker})`);
+  radial.addColorStop(1, "rgba(255, 203, 132, 0)");
+  ctx.fillStyle = radial;
+  ctx.fillRect(0, 0, w, h);
+
+  const beam = ctx.createLinearGradient(muzzleX, muzzleY, w * 0.48, h * 0.55);
+  beam.addColorStop(0, `rgba(255, 216, 143, ${0.27 * life})`);
+  beam.addColorStop(1, "rgba(255, 216, 143, 0)");
+  ctx.fillStyle = beam;
+  ctx.beginPath();
+  ctx.moveTo(muzzleX - 8, muzzleY - 10);
+  ctx.lineTo(w * 0.43, h * 0.48);
+  ctx.lineTo(w * 0.57, h * 0.63);
+  ctx.lineTo(muzzleX + 10, muzzleY + 10);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawFilmNoise() {
+  if (state.perf.quality === "low") return;
+  ctx.save();
+  ctx.globalAlpha = 0.08;
+  for (let i = 0; i < 70; i += 1) {
+    const x = Math.random() * ui.canvas.width;
+    const y = Math.random() * ui.canvas.height;
+    const w = 1 + Math.random() * 2;
+    const h = 1 + Math.random() * 2;
+    const shade = 180 + Math.floor(Math.random() * 75);
+    ctx.fillStyle = `rgb(${shade}, ${shade}, ${shade})`;
+    ctx.fillRect(x, y, w, h);
+  }
+  ctx.restore();
+}
+
+function ensureAudioReady() {
+  if (state.audio.ctx && state.audio.ctx.state !== "closed") {
+    if (state.audio.ctx.state === "suspended") {
+      state.audio.ctx.resume().catch(() => undefined);
+    }
+    return;
+  }
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  if (!AudioCtx) return;
+  state.audio.ctx = new AudioCtx();
+  state.audio.unlocked = true;
+}
+
+function audioGainValue(multiplier) {
+  return clamp(state.config.volume * multiplier, 0, 1);
+}
+
+function playTone({ frequency, type, gain, durationMs, slideTo, q }) {
+  const audioCtx = state.audio.ctx;
+  if (!audioCtx) return;
+  const now = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const amp = audioCtx.createGain();
+  const filter = audioCtx.createBiquadFilter();
+  filter.type = "lowpass";
+  filter.frequency.value = frequency * 1.8;
+  filter.Q.value = q || 0.8;
+
+  osc.type = type;
+  osc.frequency.setValueAtTime(frequency, now);
+  if (slideTo) {
+    osc.frequency.exponentialRampToValueAtTime(Math.max(40, slideTo), now + durationMs / 1000);
+  }
+
+  amp.gain.setValueAtTime(Math.max(0.0001, gain), now);
+  amp.gain.exponentialRampToValueAtTime(0.0001, now + durationMs / 1000);
+
+  osc.connect(filter);
+  filter.connect(amp);
+  amp.connect(audioCtx.destination);
+  osc.start(now);
+  osc.stop(now + durationMs / 1000);
+}
+
+function playShotSound() {
+  if (!state.audio.ctx) return;
+  playTone({
+    frequency: 170,
+    type: "sawtooth",
+    gain: audioGainValue(0.09),
+    durationMs: 85,
+    slideTo: 70,
+    q: 2.8,
+  });
+}
+
+function playHitSound(isAlpha) {
+  if (!state.audio.ctx) return;
+  playTone({
+    frequency: isAlpha ? 122 : 146,
+    type: "square",
+    gain: audioGainValue(isAlpha ? 0.055 : 0.04),
+    durationMs: isAlpha ? 92 : 70,
+    slideTo: isAlpha ? 90 : 105,
+    q: 1.2,
+  });
+}
+
+function playKillSound(isAlpha) {
+  if (!state.audio.ctx) return;
+  playTone({
+    frequency: isAlpha ? 92 : 108,
+    type: "triangle",
+    gain: audioGainValue(isAlpha ? 0.08 : 0.06),
+    durationMs: isAlpha ? 190 : 140,
+    slideTo: isAlpha ? 58 : 66,
+    q: 0.9,
+  });
+}
+
+function playDamageSound() {
+  ensureAudioReady();
+  if (!state.audio.ctx) return;
+  playTone({
+    frequency: 72,
+    type: "square",
+    gain: audioGainValue(0.07),
+    durationMs: 130,
+    slideTo: 55,
+    q: 1.6,
+  });
+}
+
+function drawVignette() {
+  const vignette = ctx.createRadialGradient(
+    ui.canvas.width * 0.5,
+    ui.canvas.height * 0.56,
+    ui.canvas.height * 0.15,
+    ui.canvas.width * 0.5,
+    ui.canvas.height * 0.56,
+    ui.canvas.height * 0.86,
+  );
+  vignette.addColorStop(0, "rgba(0, 0, 0, 0)");
+  vignette.addColorStop(1, "rgba(6, 3, 3, 0.72)");
+  ctx.fillStyle = vignette;
+  ctx.fillRect(0, 0, ui.canvas.width, ui.canvas.height);
+
+  if (state.damageFx.ttl <= 0) return;
+  const life = clamp(state.damageFx.ttl / 620, 0, 1);
+  const pulse = 0.55 + Math.sin(state.damageFx.pulse) * 0.45;
+  const edgeAlpha = clamp((0.22 + state.damageFx.intensity * 0.58) * life * pulse, 0, 0.86);
+  const bloodEdge = ctx.createRadialGradient(
+    ui.canvas.width * 0.5,
+    ui.canvas.height * 0.58,
+    ui.canvas.height * 0.18,
+    ui.canvas.width * 0.5,
+    ui.canvas.height * 0.58,
+    ui.canvas.height * 0.9,
+  );
+  bloodEdge.addColorStop(0, "rgba(120, 0, 0, 0)");
+  bloodEdge.addColorStop(0.58, `rgba(128, 7, 7, ${edgeAlpha * 0.6})`);
+  bloodEdge.addColorStop(1, `rgba(84, 0, 0, ${edgeAlpha})`);
+  ctx.fillStyle = bloodEdge;
+  ctx.fillRect(0, 0, ui.canvas.width, ui.canvas.height);
+
+  const centerFlash = clamp((0.08 + state.damageFx.intensity * 0.16) * life, 0, 0.28);
+  const flash = ctx.createRadialGradient(
+    ui.canvas.width * 0.5,
+    ui.canvas.height * 0.66,
+    0,
+    ui.canvas.width * 0.5,
+    ui.canvas.height * 0.66,
+    ui.canvas.height * 0.52,
+  );
+  flash.addColorStop(0, `rgba(255, 112, 92, ${centerFlash})`);
+  flash.addColorStop(1, "rgba(255, 112, 92, 0)");
+  ctx.fillStyle = flash;
+  ctx.fillRect(0, 0, ui.canvas.width, ui.canvas.height);
+}
+
+function shadeColor(hex, amount) {
+  const parsed = /^#?([a-f\\d]{2})([a-f\\d]{2})([a-f\\d]{2})$/i.exec(hex);
+  if (!parsed) return hex;
+  const clampColor = (n) => clamp(n + amount, 0, 255);
+  const r = clampColor(parseInt(parsed[1], 16));
+  const g = clampColor(parseInt(parsed[2], 16));
+  const b = clampColor(parseInt(parsed[3], 16));
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
+function isValidUrlOrigin(text) {
+  try {
+    const parsed = new URL(text);
+    return Boolean(parsed.origin && (parsed.protocol === "https:" || parsed.protocol === "http:"));
+  } catch (_error) {
+    return false;
+  }
+}
+
+function notifyReady() {
+  window.parent?.postMessage(
+    {
+      type: "zombite.ready",
+      payload: { version: 1, accepts: [...schemaKeys] },
+    },
+    "*",
+  );
+}
+
+function bootRuntime() {
+  setStatus(statusText("Loading assets"));
+  ui.startBtn.disabled = true;
+  drawIntro();
+  preloadRuntimeAssets()
+    .then(() => {
+      ui.startBtn.disabled = false;
+      hideOutcome();
+      setStatus(statusText("Press Start"));
+      notifyReady();
+    })
+    .catch(() => {
+      ui.startBtn.disabled = false;
+      showOutcome({
+        title: statusText("Asset fallback mode"),
+        text: statusText("Some assets were delayed. You can retry or continue with fallback visuals."),
+        continueText: statusText("Retry load"),
+        mode: "boot_retry",
+      });
+      setStatus(statusText("Fallback mode active"));
+      notifyReady();
+    });
+}
+
+function preloadRuntimeAssets() {
+  const timeoutMs = 2400;
+  const timeout = new Promise((_, reject) => {
+    window.setTimeout(() => reject(new Error("asset timeout")), timeoutMs);
+  });
+  return Promise.race([
+    Promise.all([waitForFonts(), waitForAnimationFrame()]),
+    timeout,
+  ]);
+}
+
+function waitForFonts() {
+  if (!document.fonts || !document.fonts.ready) return Promise.resolve();
+  return document.fonts.ready.then(() => undefined);
+}
+
+function waitForAnimationFrame() {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => resolve());
+  });
+}
+
+function observePerformance(dt) {
+  if (!Number.isFinite(dt) || dt <= 0) return;
+  const fps = 1000 / dt;
+  state.perf.sampleFpsSum += fps;
+  state.perf.sampleFrames += 1;
+  if (state.perf.sampleFrames < 30) return;
+
+  const avgFps = state.perf.sampleFpsSum / state.perf.sampleFrames;
+  state.perf.sampleFpsSum = 0;
+  state.perf.sampleFrames = 0;
+
+  if (avgFps < 42) {
+    state.perf.lowScore += 1;
+    state.perf.highScore = 0;
+  } else if (avgFps > 54) {
+    state.perf.highScore += 1;
+    state.perf.lowScore = Math.max(0, state.perf.lowScore - 1);
+  } else {
+    state.perf.lowScore = Math.max(0, state.perf.lowScore - 1);
+    state.perf.highScore = Math.max(0, state.perf.highScore - 1);
+  }
+
+  if (state.perf.quality === "high" && state.perf.lowScore >= 3) {
+    state.perf.quality = "low";
+    setStatus(statusText("Performance mode enabled"));
+  } else if (state.perf.quality === "low" && state.perf.highScore >= 5) {
+    state.perf.quality = "high";
+    setStatus(statusText("Performance stable"));
+  }
+}
+
+function showOutcome({ title, text, continueText, mode }) {
+  state.waitingDecision = true;
+  state.decisionMode = mode;
+  ui.outcomeTitle.textContent = title;
+  ui.outcomeText.textContent = text;
+  ui.continueBtn.textContent = continueText;
+  ui.outcomePanel.classList.remove("hidden");
+}
+
+function hideOutcome() {
+  ui.outcomePanel.classList.add("hidden");
+}
+
+function continueRun() {
+  if (state.decisionMode === "boot_retry") {
+    state.waitingDecision = false;
+    state.decisionMode = "none";
+    hideOutcome();
+    bootRuntime();
+    return;
+  }
+
+  if (state.decisionMode === "level_complete") {
+    state.level += 1;
+    state.health = clamp(state.health + 20, 0, BASE_HEALTH);
+    state.ammo = BASE_MAGAZINE;
+    state.reloading = false;
+    state.gameOver = false;
+    state.waitingDecision = false;
+    state.decisionMode = "none";
+    hideOutcome();
+    beginLevel();
+    setStatus(statusText(`Level ${state.level} started`));
+    return;
+  }
+
+  if (state.decisionMode === "game_over") {
+    state.level = state.savedLevel;
+    state.running = true;
+    state.gameOver = false;
+    state.waitingDecision = false;
+    state.decisionMode = "none";
+    state.health = BASE_HEALTH;
+    state.ammo = BASE_MAGAZINE;
+    state.reloading = false;
+    hideOutcome();
+    beginLevel();
+    setStatus(statusText(`Level ${state.level} started`));
+    return;
+  }
+
+  if (state.decisionMode === "victory") {
+    startGame();
+  }
+}
+
+function restartRun() {
+  startGame();
+}

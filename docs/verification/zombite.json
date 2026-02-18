@@ -1,0 +1,14 @@
+{
+  "ok": true,
+  "feature": "zombite",
+  "command": "npm run test:aitri",
+  "commandSource": "package.json:scripts.test:aitri",
+  "exitCode": 0,
+  "durationMs": 181,
+  "startedAt": "2026-02-15T22:02:48.237Z",
+  "finishedAt": "2026-02-15T22:02:48.418Z",
+  "stdoutTail": "# Subtest: session pacing controls exist in runtime\nok 9 - session pacing controls exist in runtime\n  ---\n  duration_ms: 0.169041\n  ...\n# Subtest: level progression tuning and alpha escalation are present\nok 10 - level progression tuning and alpha escalation are present\n  ---\n  duration_ms: 0.170083\n  ...\n# Subtest: pacing model keeps progression gradual and level 10 reachable for medium skill\nok 11 - pacing model keeps progression gradual and level 10 reachable for medium skill\n  ---\n  duration_ms: 0.259417\n  ...\n# Subtest: alpha encounters are distinct, tougher, and progression-safe\nok 12 - alpha encounters are distinct, tougher, and progression-safe\n  ---\n  duration_ms: 0.19025\n  ...\n# Subtest: scene and profile tables are defined for runtime HUD and visuals\nok 13 - scene and profile tables are defined for runtime HUD and visuals\n  ---\n  duration_ms: 0.079542\n  ...\n# Subtest: README documents difficulty aliases\nok 14 - README documents difficulty aliases\n  ---\n  duration_ms: 0.053125\n  ...\n1..14\n# tests 14\n# suites 0\n# pass 14\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 46.883459",
+  "stderrTail": "",
+  "reason": "passed",
+  "evidenceFile": "docs/verification/zombite.json"
+}
