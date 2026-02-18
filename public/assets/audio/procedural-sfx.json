@@ -1,0 +1,15 @@
+{
+  "engine": "WebAudio Oscillator",
+  "events": {
+    "shot": { "wave": "square", "frequency": 180, "durationMs": 50 },
+    "zombie-hit": { "wave": "sawtooth", "frequency": 140, "durationMs": 60 },
+    "zombie-kill": { "wave": "square", "frequency": 320, "durationMs": 40 },
+    "civilian-error": { "wave": "square", "frequency": 620, "durationMs": 80 },
+    "danger-alert": { "wave": "sawtooth", "frequency": 200, "durationMs": 120 },
+    "civilian-scream": { "wave": "triangle", "frequency": 520, "durationMs": 80 },
+    "powerup-positive": { "wave": "triangle", "frequency": 420, "durationMs": 70 },
+    "rescue-bonus": { "wave": "triangle", "frequency": 360, "durationMs": 80 },
+    "level-clear": { "wave": "triangle", "frequency": 520, "durationMs": 120 }
+  },
+  "license": "CC0-1.0"
+}

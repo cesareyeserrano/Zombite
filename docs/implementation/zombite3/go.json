@@ -1,0 +1,7 @@
+{
+  "ok": true,
+  "feature": "zombite3",
+  "decidedAt": "2026-02-17T20:43:53.067Z",
+  "policyEvidence": "docs/policy/zombite3.json",
+  "verificationEvidence": "docs/verification/zombite3.json"
+}

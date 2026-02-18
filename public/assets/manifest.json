@@ -1,0 +1,85 @@
+{
+  "version": 1,
+  "assets": [
+    {
+      "name": "Zombie Pixel Sprite",
+      "path": "/assets/sprites/zombie-pixel.svg",
+      "type": "enemy",
+      "sourceUrl": "local://zombite3/original-art/zombie-pixel.svg",
+      "license": "CC0-1.0",
+      "author": "Zombite3 Project"
+    },
+    {
+      "name": "Civilian Pixel Sprite",
+      "path": "/assets/sprites/civilian-pixel.svg",
+      "type": "npc",
+      "sourceUrl": "local://zombite3/original-art/civilian-pixel.svg",
+      "license": "CC0-1.0",
+      "author": "Zombite3 Project"
+    },
+    {
+      "name": "Crosshair Pixel Sprite",
+      "path": "/assets/sprites/crosshair-pixel.svg",
+      "type": "ui",
+      "sourceUrl": "local://zombite3/original-art/crosshair-pixel.svg",
+      "license": "CC0-1.0",
+      "author": "Zombite3 Project"
+    },
+    {
+      "name": "Background City Pixel",
+      "path": "/assets/sprites/background-city.svg",
+      "type": "background",
+      "sourceUrl": "local://zombite3/original-art/background-city.svg",
+      "license": "CC0-1.0",
+      "author": "Zombite3 Project"
+    },
+    {
+      "name": "Muzzle Flash Pixel",
+      "path": "/assets/sprites/muzzle-flash.svg",
+      "type": "vfx",
+      "sourceUrl": "local://zombite3/original-art/muzzle-flash.svg",
+      "license": "CC0-1.0",
+      "author": "Zombite3 Project"
+    },
+    {
+      "name": "Hit Marker Pixel",
+      "path": "/assets/sprites/hit-marker.svg",
+      "type": "vfx",
+      "sourceUrl": "local://zombite3/original-art/hit-marker.svg",
+      "license": "CC0-1.0",
+      "author": "Zombite3 Project"
+    },
+    {
+      "name": "Powerup Health Sprite",
+      "path": "/assets/sprites/powerup-health.svg",
+      "type": "ui",
+      "sourceUrl": "local://zombite3/original-art/powerup-health.svg",
+      "license": "CC0-1.0",
+      "author": "Zombite3 Project"
+    },
+    {
+      "name": "Powerup Rescue Sprite",
+      "path": "/assets/sprites/powerup-rescue.svg",
+      "type": "ui",
+      "sourceUrl": "local://zombite3/original-art/powerup-rescue.svg",
+      "license": "CC0-1.0",
+      "author": "Zombite3 Project"
+    },
+    {
+      "name": "Safe Checkpoint Sprite",
+      "path": "/assets/sprites/safe-checkpoint.svg",
+      "type": "ui",
+      "sourceUrl": "local://zombite3/original-art/safe-checkpoint.svg",
+      "license": "CC0-1.0",
+      "author": "Zombite3 Project"
+    },
+    {
+      "name": "Procedural SFX Profile",
+      "path": "/assets/audio/procedural-sfx.json",
+      "type": "audio",
+      "sourceUrl": "local://zombite3/original-audio/procedural-sfx.json",
+      "license": "CC0-1.0",
+      "author": "Zombite3 Project"
+    }
+  ]
+}

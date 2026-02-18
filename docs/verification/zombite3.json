@@ -1,0 +1,89 @@
+{
+  "ok": true,
+  "feature": "zombite3",
+  "command": "npm run test:aitri",
+  "commandSource": "package.json:scripts.test:aitri",
+  "exitCode": 0,
+  "durationMs": 196,
+  "timeoutMs": 120000,
+  "startedAt": "2026-02-18T01:22:52.022Z",
+  "finishedAt": "2026-02-18T01:22:52.218Z",
+  "stdoutTail": "# Subtest: tc_5_enforce_fixed_camera_gallery_shooter_view\nok 5 - tc_5_enforce_fixed_camera_gallery_shooter_view\n  ---\n  duration_ms: 2.621333\n  ...\n# Subtest: tc_6_validate_lane_depth_grounding_and_shadows\nok 6 - tc_6_validate_lane_depth_grounding_and_shadows\n  ---\n  duration_ms: 0.68525\n  ...\n# Subtest: tc_7_validate_zombie_targets_civilians_not_mouse\nok 7 - tc_7_validate_zombie_targets_civilians_not_mouse\n  ---\n  duration_ms: 0.449917\n  ...\n# Subtest: tc_8_validate_damage_rules_and_target_priority\nok 8 - tc_8_validate_damage_rules_and_target_priority\n  ---\n  duration_ms: 1.209\n  ...\n# Subtest: tc_9_validate_alpha_brute_by_level_and_brute_loss\nok 9 - tc_9_validate_alpha_brute_by_level_and_brute_loss\n  ---\n  duration_ms: 0.58575\n  ...\n# Subtest: tc_10_validate_airborne_powerups_and_effects\nok 10 - tc_10_validate_airborne_powerups_and_effects\n  ---\n  duration_ms: 1.869625\n  ...\n1..10\n# tests 10\n# suites 0\n# pass 10\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 51.760792",
+  "stderrTail": "",
+  "reason": "passed",
+  "tcCoverage": {
+    "available": true,
+    "mode": "scaffold",
+    "declared": 10,
+    "executable": 10,
+    "passing": 10,
+    "failing": 0,
+    "missing": 0,
+    "mapped": {
+      "TC-1": {
+        "found": true,
+        "file": "tests/zombite3/generated/tc-1-validate-us-1-primary-behavior.test.mjs"
+      },
+      "TC-2": {
+        "found": true,
+        "file": "tests/zombite3/generated/tc-2-validate-us-2-primary-behavior.test.mjs"
+      },
+      "TC-3": {
+        "found": true,
+        "file": "tests/zombite3/generated/tc-3-handle-edge-behavior-a-single-shot-f.test.mjs"
+      },
+      "TC-4": {
+        "found": true,
+        "file": "tests/zombite3/generated/tc-4-enforce-security-control-do-not-exec.test.mjs"
+      },
+      "TC-5": {
+        "found": true,
+        "file": "tests/zombite3/generated/tc-5-to-10-consolidated-runtime.test.mjs"
+      },
+      "TC-6": {
+        "found": true,
+        "file": "tests/zombite3/generated/tc-5-to-10-consolidated-runtime.test.mjs"
+      },
+      "TC-7": {
+        "found": true,
+        "file": "tests/zombite3/generated/tc-5-to-10-consolidated-runtime.test.mjs"
+      },
+      "TC-8": {
+        "found": true,
+        "file": "tests/zombite3/generated/tc-5-to-10-consolidated-runtime.test.mjs"
+      },
+      "TC-9": {
+        "found": true,
+        "file": "tests/zombite3/generated/tc-5-to-10-consolidated-runtime.test.mjs"
+      },
+      "TC-10": {
+        "found": true,
+        "file": "tests/zombite3/generated/tc-5-to-10-consolidated-runtime.test.mjs"
+      }
+    }
+  },
+  "frCoverage": {
+    "available": true,
+    "mode": "scaffold",
+    "declared": 2,
+    "covered": 2,
+    "uncovered": []
+  },
+  "usCoverage": {
+    "available": true,
+    "mode": "scaffold",
+    "declared": 2,
+    "fullyVerified": [
+      "US-1",
+      "US-2"
+    ],
+    "partial": [],
+    "unverified": []
+  },
+  "coverageConfidence": {
+    "score": 100,
+    "ratio": 1,
+    "mode": "scaffold"
+  },
+  "evidenceFile": "docs/verification/zombite3.json"
+}

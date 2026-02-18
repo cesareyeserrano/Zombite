@@ -1,0 +1,72 @@
+{
+  "ok": true,
+  "feature": "zombite3",
+  "decision": "SHIP",
+  "generatedAt": "2026-02-17T20:55:50.876Z",
+  "confidence": {
+    "score": 1,
+    "threshold": 0.85,
+    "pass": true
+  },
+  "tcSummary": {
+    "declared": 4,
+    "executable": 4,
+    "passing": 4,
+    "failing": 0,
+    "missing": 0
+  },
+  "frMatrix": [
+    {
+      "frId": "FR-1",
+      "tc": [
+        "TC-1",
+        "TC-3",
+        "TC-4"
+      ],
+      "passingTc": [
+        "TC-1",
+        "TC-3",
+        "TC-4"
+      ],
+      "covered": true
+    },
+    {
+      "frId": "FR-2",
+      "tc": [
+        "TC-2"
+      ],
+      "passingTc": [
+        "TC-2"
+      ],
+      "covered": true
+    }
+  ],
+  "acMatrix": [
+    {
+      "acId": "AC-1",
+      "tc": [
+        "TC-1",
+        "TC-2"
+      ],
+      "passingTc": [
+        "TC-1",
+        "TC-2"
+      ],
+      "covered": true
+    }
+  ],
+  "uiRefValidation": [],
+  "blockers": [],
+  "timeline": {
+    "go": "2026-02-17T20:43:53.067Z",
+    "scaffold": "2026-02-17T20:44:58.132Z",
+    "implement": "2026-02-17T20:47:22.748Z",
+    "verify": "2026-02-17T20:55:35.328Z"
+  },
+  "evidence": {
+    "verification": "docs/verification/zombite3.json",
+    "scaffold": "docs/implementation/zombite3/scaffold-manifest.json",
+    "implement": "docs/implementation/zombite3/implement-manifest.json",
+    "go": "docs/implementation/zombite3/go.json"
+  }
+}

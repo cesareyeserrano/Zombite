@@ -1,0 +1,30 @@
+{
+  "ok": true,
+  "limited": true,
+  "feature": "zombite3",
+  "evaluatedAt": "2026-02-17T20:43:27.726Z",
+  "policy": {
+    "allowDependencyChanges": false,
+    "blockedImports": [],
+    "blockedPaths": []
+  },
+  "files": {
+    "changed": [],
+    "dependencyChanged": []
+  },
+  "gaps": {
+    "dependency_drift": [],
+    "forbidden_path": [],
+    "forbidden_import": []
+  },
+  "gapSummary": {
+    "dependency_drift": 0,
+    "forbidden_path": 0,
+    "forbidden_import": 0
+  },
+  "issues": [],
+  "warnings": [
+    "Policy checks are limited outside git repositories (dependency drift and changed-file scope unavailable)."
+  ],
+  "evidenceFile": "docs/policy/zombite3.json"
+}

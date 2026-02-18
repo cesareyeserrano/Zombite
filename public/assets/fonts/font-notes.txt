@@ -1,0 +1,2 @@
+This project uses browser-safe system fonts for UI text.
+No external font binaries are required in v1.

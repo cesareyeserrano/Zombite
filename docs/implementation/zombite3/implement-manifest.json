@@ -1,0 +1,27 @@
+{
+  "feature": "zombite3",
+  "generatedAt": "2026-02-17T20:47:22.748Z",
+  "stories": [
+    {
+      "id": "US-1",
+      "order": 1,
+      "dependencyScore": 2,
+      "brief": "docs/implementation/zombite3/US-1.md",
+      "testCases": [
+        "TC-1",
+        "TC-3",
+        "TC-4"
+      ]
+    },
+    {
+      "id": "US-2",
+      "order": 2,
+      "dependencyScore": 2,
+      "brief": "docs/implementation/zombite3/US-2.md",
+      "testCases": [
+        "TC-2"
+      ]
+    }
+  ],
+  "orderFile": "docs/implementation/zombite3/IMPLEMENTATION_ORDER.md"
+}
