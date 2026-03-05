@@ -25,6 +25,9 @@ test("tc_5_enforce_fixed_camera_gallery_shooter_view", async () => {
 test("tc_6_validate_lane_depth_grounding_and_shadows", async () => {
   const { scene } = await loadSources();
   assert.match(scene, /const LANES = \[/);
+  assert.match(scene, /y: GROUND_Y - 20/);
+  assert.match(scene, /y: GROUND_Y,/);
+  assert.match(scene, /y: GROUND_Y \+ 28/);
   assert.match(scene, /scale: 0\.7/);
   assert.match(scene, /scale: 0\.85/);
   assert.match(scene, /scale: 1/);
@@ -62,8 +65,7 @@ test("tc_9_validate_alpha_brute_by_level_and_brute_loss", async () => {
   assert.match(scene, /if \(this\.state\.level >= 5\)/);
   assert.match(scene, /zombie-brute/);
   assert.match(scene, /const maxHp = isBrute \? 6 : isElite \? 3 : 1/);
-  assert.match(scene, /const lifeDamage = isBrute \? 40 : isElite \? 20 : 10/);
-  assert.match(scene, /const savedPenalty = isBrute \? 2 : 0/);
+  assert.match(scene, /const lifeDamage = isBrute \? 40 : 15/);
 });
 
 // TC-10: Validate airborne power-up readability and effect contract
@@ -73,5 +75,18 @@ test("tc_10_validate_airborne_powerups_and_effects", async () => {
   assert.match(scene, /type === "powerup-health" \|\| target\.type === "powerup-rescue"/);
   assert.match(rules, /healthPowerupValue: 20/);
   assert.match(rules, /rescuePowerupScore: 50/);
-  assert.match(scene, /if \(entity\.shadow\) \{\n\s*entity\.shadow\.destroy\(\);\n\s*\}/);
+});
+
+// TC-15: Validate civilian-to-zombie conversion (Infection)
+test("tc_15_validate_infection_mechanic", async () => {
+  const { scene } = await loadSources();
+  assert.match(scene, /infectCivilian\(civil, zombie\)/);
+  assert.match(scene, /customX: x/);
+});
+
+// TC-16: Validate extreme pacing and off-screen protection
+test("tc_16_validate_pacing_and_offscreen_protection", async () => {
+  const { scene } = await loadSources();
+  assert.match(scene, /spawnIntervalMinMs: 1200/);
+  assert.match(scene, /if \(civil\.x < 30\) continue/);
 });

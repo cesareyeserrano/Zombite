@@ -49,3 +49,7 @@ Expected outcome: Que el jugador disfrute sesiones cortas de 3 a 8 minutos, comp
 - AC-2: Given una partida en progreso, when avanza del nivel 1 al 10, then la dificultad aumenta gradualmente y se percibe retadora pero razonable.
 - AC-3: Given un nivel con zombie alfa, when el jugador lo enfrenta, then el alfa requiere mayor esfuerzo que un zombie normal y su derrota permite continuar.
 - AC-4: Given un sitio externo integra el juego via iframe/widget, when envia configuracion valida, then el juego aplica la configuracion y rechaza entradas invalidas sin romper la sesion.
+
+## 10. Requirement Source Statement
+- Requirements in this spec were provided by the user.
+- Retroactively added by aitri upgrade.

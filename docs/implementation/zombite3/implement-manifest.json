@@ -21,6 +21,28 @@
       "testCases": [
         "TC-2"
       ]
+    },
+    {
+      "id": "US-3",
+      "order": 3,
+      "dependencyScore": 3,
+      "brief": "docs/implementation/zombite3/US-3.md",
+      "testCases": [
+        "TC-11",
+        "TC-12",
+        "TC-13",
+        "TC-14"
+      ]
+    },
+    {
+      "id": "US-4",
+      "order": 4,
+      "dependencyScore": 4,
+      "brief": "docs/implementation/zombite3/US-4.md",
+      "testCases": [
+        "TC-15",
+        "TC-16"
+      ]
     }
   ],
   "orderFile": "docs/implementation/zombite3/IMPLEMENTATION_ORDER.md"

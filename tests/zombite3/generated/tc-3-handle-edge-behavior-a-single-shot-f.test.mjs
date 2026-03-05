@@ -18,11 +18,11 @@ test("tc_3_handle_edge_behavior_a_single_shot_frame_may_overlap_multiple_entitie
   for (let i = 0; i < 20; i += 1) {
     const ordered = i % 2 === 0 ? [zombie, civilian] : [civilian, zombie];
     const target = resolveShotTarget({ crosshair, entities: ordered });
-    assert.equal(target?.type, "civilian");
+    assert.equal(target?.type, "zombie");
 
     const state = applyShotOutcome(createInitialState(), { type: target.type });
-    assert.equal(state.score, -50);
-    assert.equal(state.life, 85);
-    assert.equal(state.civiliansHit, 1);
+    assert.equal(state.score, 10);
+    assert.equal(state.life, 100);
+    assert.equal(state.kills, 1);
   }
 });

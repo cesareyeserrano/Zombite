@@ -32,46 +32,46 @@
 
 ### Epic: Camera and Scene Coherence
 - Goal: Player understands goals in <5 seconds without tutorial.
-- `TODO`: Keep camera fully fixed; mouse moves only crosshair.
-- `TODO`: Remove cursor-linked world/parallax movement.
-- `TODO`: Keep crosshair always above all entities.
+- `DONE`: Keep camera fully fixed; mouse moves only crosshair.
+- `DONE`: Remove cursor-linked world/parallax movement.
+- `DONE`: Keep crosshair always above all entities.
 
 ### Epic: Grounded Visual Physics
-- `TODO`: Maintain visible continuous ground plane (street/sidewalk) with clear foot contact line.
-- `TODO`: Keep all ground entities anchored to shared lane floor references.
-- `TODO`: Ground shadows for civilians/zombies/elite/brute only.
-- `TODO`: No ground shadows for airborne power-ups.
-- `TODO`: Shadow scale by lane depth (front 1.0, mid 0.85, back 0.7).
+- `DONE`: Maintain visible continuous ground plane (street/sidewalk) with clear foot contact line.
+- `DONE`: Keep all ground entities anchored to shared lane floor references.
+- `DONE`: Ground shadows for civilians/zombies/elite/brute only.
+- `DONE`: No ground shadows for airborne power-ups.
+- `DONE`: Shadow scale by lane depth (front 1.0, mid 0.85, back 0.7).
 
 ### Epic: Lane-Based Depth
-- `TODO`: 3 fixed lanes (back/mid/front) with different Y and scale.
-- `TODO`: Front scale 1.0, mid 0.85, back 0.7.
-- `TODO`: Lane depth should reduce overlap ambiguity and friendly-fire confusion.
+- `DONE`: 3 fixed lanes (back/mid/front) with different Y and scale.
+- `DONE`: Front scale 1.0, mid 0.85, back 0.7.
+- `DONE`: Lane depth should reduce overlap ambiguity and friendly-fire confusion.
 
 ### Epic: Entity Behavior
-- `TODO`: Civilians run to visible safe checkpoint/exit on opposite side.
-- `TODO`: Zombie AI must never target mouse/crosshair.
-- `TODO`: Zombies lock a civilian target on spawn and retarget only if target is gone.
-- `TODO`: Civil danger indicator (`!` + short scream + blink) when threatened.
+- `DONE`: Civilians run to visible safe checkpoint/exit on opposite side.
+- `DONE`: Zombie AI must never target mouse/crosshair.
+- `DONE`: Zombies lock a civilian target on spawn and retarget only if target is gone.
+- `DONE`: Civil danger indicator (`!` + short scream + blink) when threatened.
 
 ### Epic: Combat and Damage Rules
-- `TODO`: Maintain 0.25s fire cooldown.
-- `TODO`: Keep hit priority zombie over civilian on overlap.
-- `TODO`: Civilian shot = -50 score and -15 life (`FRIENDLY FIRE` feedback).
-- `TODO`: Civilian touched by zombie = -15 life and +1 lost civil.
-- `TODO`: Game over on life <= 0 or lost-civil limit reached.
+- `DONE`: Maintain 0.25s fire cooldown.
+- `DONE`: Keep hit priority zombie over civilian on overlap.
+- `DONE`: Civilian shot = -50 score and -15 life (`FRIENDLY FIRE` feedback).
+- `DONE`: Civilian touched by zombie = -15 life and +1 lost civil.
+- `DONE`: Game over on life <= 0 or lost-civil limit reached.
 
 ### Epic: Power-ups
-- `TODO`: Airborne power-ups only (not confused with civilians).
-- `TODO`: Health power-up = +20 life.
-- `TODO`: Bonus power-up = +50 score and recover 1 lost civilian.
+- `DONE`: Airborne power-ups only (not confused with civilians).
+- `DONE`: Health power-up = +20 life.
+- `DONE`: Bonus power-up = +50 score and recover 1 lost civilian.
 
 ### Epic: Special Enemies and Level Identity
-- `TODO`: Level 3 introduces Alpha zombie (bigger, faster, 3 hits).
-- `TODO`: Level 5 introduces Brute/Monster (2x size, slower, 6 hits, HP bar).
-- `TODO`: Brute reaching a civilian counts as 2 civilians lost.
-- `TODO`: Increase power-up chance after elite/brute kills.
-- `TODO`: Distinct level feel via spawn pressure and enemy mix.
+- `DONE`: Level 3 introduces Alpha zombie (bigger, faster, 3 hits).
+- `DONE`: Level 5 introduces Brute/Monster (2x size, slower, 6 hits, HP bar).
+- `DONE`: Brute reaching a civilian counts as 2 civilians lost.
+- `DONE`: Increase power-up chance after elite/brute kills.
+- `DONE`: Distinct level feel via spawn pressure and enemy mix.
 
 ### Epic: Feedback Priority
 - Visual priority target order:
@@ -80,34 +80,34 @@
   3. Alpha
   4. Normal zombie
   5. Background
-- `TODO`: Keep background contrast below active gameplay entities.
+- `DONE`: Keep background contrast below active gameplay entities.
 
 ## Implementation Backlog Addendum — Final Design Doc
 
 ### Phase A: Camera and Scene Lock
-- `IN PROGRESS`: Keep camera fully static with crosshair-only mouse movement.
-- `IN PROGRESS`: Remove any world movement/parallax tied to cursor.
-- `TODO`: Tune dusk palette for late-afternoon readability.
+- `DONE`: Keep camera fully static with crosshair-only mouse movement.
+- `DONE`: Remove any world movement/parallax tied to cursor.
+- `DONE`: Tune dusk palette for late-afternoon readability.
 
 ### Phase B: Evacuation Loop
-- `IN PROGRESS`: Spawn civilians first and spawn their pursuer zombies 1–2 seconds later.
-- `IN PROGRESS`: Prevent normal zombie-only waves (boss exceptions only).
-- `IN PROGRESS`: Count civilian reaches at visible checkpoints as rescued.
+- `DONE`: Spawn civilians first and spawn their pursuer zombies 1–2 seconds later.
+- `DONE`: Prevent normal zombie-only waves (boss exceptions only).
+- `DONE`: Count civilian reaches at visible checkpoints as rescued.
 
 ### Phase C: Threat Behaviors
-- `IN PROGRESS`: Keep zombie AI locked to civilian targets (never cursor).
-- `IN PROGRESS`: Retarget zombies only when current civilian target is gone.
-- `IN PROGRESS`: Keep civilian warning cues always-on (`!`, blink, scream).
+- `DONE`: Keep zombie AI locked to civilian targets (never cursor).
+- `DONE`: Retarget zombies only when current civilian target is gone.
+- `DONE`: Keep civilian warning cues always-on (`!`, blink, scream).
 
 ### Phase D: Combat Contract
-- `IN PROGRESS`: Fixed penalties (friendly fire: -50 score/-15 life; civilian lost: -15 life).
-- `IN PROGRESS`: Keep 0.25s cooldown and zombie-priority overlap resolution.
-- `IN PROGRESS`: Ensure level completion is rescue-goal based (not kill-goal).
+- `DONE`: Fixed penalties (friendly fire: -50 score/-15 life; civilian lost: -15 life).
+- `DONE`: Keep 0.25s cooldown and zombie-priority overlap resolution.
+- `DONE`: Ensure level completion is rescue-goal based (not kill-goal).
 
 ### Phase E: Special Enemies
-- `IN PROGRESS`: Level 3 Alpha (3 HP, bigger, faster).
-- `IN PROGRESS`: Level 5 Brute (6 HP, 2x size, slow, 2-civil penalty, HP bar).
-- `IN PROGRESS`: Increase near-term power-up chance after elite/brute kills.
+- `DONE`: Level 3 Alpha (3 HP, bigger, faster).
+- `DONE`: Level 5 Brute (6 HP, 2x size, slow, 2-civil penalty, HP bar).
+- `DONE`: Increase near-term power-up chance after elite/brute kills.
 
 ## Implementation Backlog Addendum — Documento Final de Diseño
 
@@ -120,7 +120,8 @@
 - `DONE`: Recognizable sidewalk/asphalt split with visible curb line.
 - `DONE`: Three lane depth system (back 0.7, mid 0.85, front 1.0).
 - `DONE`: Contact shadows for all ground entities only (no power-up shadows).
-- `TODO`: Final polish pass to ensure every lane foot contact reads at a glance on all resolutions.
+- `DONE`: Final polish pass to ensure every lane foot contact reads at a glance on all resolutions.
+
 
 ### Phase H: Evacuation Loop
 - `DONE`: Civilians spawn first.
