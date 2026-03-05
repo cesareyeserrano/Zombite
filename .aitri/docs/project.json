@@ -1,0 +1,9 @@
+{
+  "name": "Zombite3",
+  "initializedAt": "2026-03-05T01:07:38.742Z",
+  "root": "Zombite3",
+  "detectedStack": [
+    "node"
+  ],
+  "aitriVersion": "1.3.1"
+}
