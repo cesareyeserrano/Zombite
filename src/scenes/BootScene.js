@@ -6,7 +6,8 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload() {
-    this.load.setPath("/assets");
+    const base = import.meta.env.BASE_URL || "/";
+    this.load.setPath(base + "assets");
     this.load.image("bg-city", "sprites/background-city.svg");
     this.load.image("enemy-zombie", "sprites/zombie-pixel.svg");
     this.load.image("enemy-zombie-alpha", "sprites/zombie-alpha.svg");
