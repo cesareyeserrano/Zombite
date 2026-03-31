@@ -1,0 +1,378 @@
+{
+  "project_name": "Zombite3 \u2014 stabilizacion feature",
+  "project_summary": "This feature stabilizes the project repository after three overlapping historical layers (Aitri v1.x pipeline artifacts, v0.1.70 upgrade artifacts, and the adoption-scan module extraction). It produces no new gameplay. Success is measured by a single coherent repo state in which a new contributor can clone, follow the README, and reach a running game in under 5 minutes; all tests verify observable behavior rather than source-text patterns; and no legacy pipeline artifacts remain in docs/, specs/, or backlog/.",
+  "product_analysis": {
+    "north_star_kpi": "A new contributor can clone the repo, follow README instructions, and reach a running game on localhost in 5 minutes or less \u2014 with zero contradictory or stale documents encountered.",
+    "jtbd": "Give the developer and CI/CD agent a single, coherent repo state they can trust: accurate docs, behavioral tests, and no legacy artifacts that create confusion or hide regressions.",
+    "guardrail_metric": "npm test must continue to pass 100% of tests after every stabilization change \u2014 no regression introduced by cleanup or refactor.",
+    "idea_gaps": []
+  },
+  "user_personas": [
+    {
+      "role": "Returning developer (Cesar)",
+      "tech_level": "high",
+      "goal": "Resume work on the project with accurate documentation, trustworthy tests, and a clean repo structure.",
+      "pain_point": "Three overlapping layers of history produce contradictory docs, regex tests that pass even after logic regressions, and a README describing a superseded beta."
+    },
+    {
+      "role": "CI/CD pipeline agent",
+      "tech_level": "high",
+      "goal": "Run the test suite on every push and detect behavioral regressions automatically.",
+      "pain_point": "Source-text regex tests cannot detect logic regressions; absence of any CI workflow means passing status is a manually-snapshotted artifact."
+    },
+    {
+      "role": "New collaborator",
+      "tech_level": "mid",
+      "goal": "Understand project architecture, run the game locally, and contribute without needing to decode legacy vs. current artifacts.",
+      "pain_point": "docs/ contains Aitri v1.x pipeline directories, stale migration plans, and release notes that do not reflect the current codebase."
+    }
+  ],
+  "no_go_zone": [
+    "No new gameplay features \u2014 no waves, enemies, power-ups, scoring mechanics, UI screens, or game state changes.",
+    "No gameplay logic changes \u2014 balance values, damage constants, spawn rates, and scoring rules are frozen during stabilization.",
+    "No technology migration \u2014 Phaser 3 + Vite stack is preserved; canvas-only or plain-JS rewrites are excluded.",
+    "No backend, multiplayer, cloud persistence, or authentication \u2014 the game remains a self-contained browser experience.",
+    "No audio model changes \u2014 procedural Web Audio synthesis is preserved; audio file assets or external CDN audio are excluded.",
+    "No web/ subtree changes \u2014 the web/app.js legacy prototype decision is deferred to a separate feature.",
+    "No .aitri-data/ structural changes beyond removing files whose content is fully duplicated by root-level artifacts \u2014 pipeline state still referenced by aitri commands must not be deleted.",
+    "No Docker or deployment changes \u2014 Dockerfile and docker-compose.yml scope creep is excluded from this feature (item 7 in adoption scan is deferred)."
+  ],
+  "functional_requirements": [
+    {
+      "id": "FR-STB-001",
+      "title": "Remove Aitri v1.x legacy pipeline artifact directories",
+      "description": "All directories and files that belong to the Aitri v1.x pipeline format must be removed from the repository so that no contributor encounters contradictory legacy structure alongside the current v0.1.70 root artifacts.",
+      "priority": "MUST",
+      "type": "logic",
+      "acceptance_criteria": [
+        "FR-STB-001-AC1: After the change, none of the following paths exist in the repository: docs/discovery/, docs/plan/, docs/delivery/, docs/policy/, docs/verification/, specs/approved/, backlog/zombite/.",
+        "FR-STB-001-AC2: After the change, git status shows no untracked or tracked files under those paths.",
+        "FR-STB-001-AC3: The removal is committed and the repository root retains only the current-format Aitri artifacts (01_REQUIREMENTS.json, 02_SYSTEM_DESIGN.md, 03_TEST_CASES.json, 04_TEST_RESULTS.json, features/)."
+      ],
+      "implementation_level": "functional"
+    },
+    {
+      "id": "FR-STB-002",
+      "title": "Remove or archive stale docs/ files",
+      "description": "Stale documents in docs/ that describe work that was never executed or that duplicate superseded state must be removed or archived. Specifically: CANVAS_PURE_MIGRATION_PLAN.md (migration never executed), RELEASE_NOTES_V2.md (version history superseded by current state), and CHECKPOINT_*.md files (point-in-time snapshots no longer relevant).",
+      "priority": "MUST",
+      "type": "logic",
+      "acceptance_criteria": [
+        "FR-STB-002-AC1: After the change, docs/CANVAS_PURE_MIGRATION_PLAN.md does not exist in the repository working tree.",
+        "FR-STB-002-AC2: After the change, docs/RELEASE_NOTES_V2.md does not exist in the repository working tree.",
+        "FR-STB-002-AC3: After the change, no CHECKPOINT_*.md files exist in docs/.",
+        "FR-STB-002-AC4: Any docs/ files retained are directly referenced by or directly support the current root-level SDLC artifacts."
+      ],
+      "implementation_level": "functional"
+    },
+    {
+      "id": "FR-STB-003",
+      "title": "Update README.md to reflect current professional state",
+      "description": "README.md must describe the current codebase accurately: Phaser 3 + Vite stack, src/audio/AudioManager.js and src/locale/ui.js modules, correct project structure, setup commands, controls, and architecture. It must not describe the original beta or reference removed files.",
+      "priority": "MUST",
+      "type": "UX",
+      "acceptance_criteria": [
+        "FR-STB-003-AC1: README.md contains a setup section with commands (npm install, npm run dev) that a developer can follow from a clean clone to reach a running game in 5 minutes or less on a standard Node.js 18+ environment.",
+        "FR-STB-003-AC2: README.md documents the current top-level directory structure (src/, tests/, docs/, features/, public/) with accurate descriptions of each directory's role.",
+        "FR-STB-003-AC3: README.md includes an architecture section that lists at minimum: GameScene, gameRules.js, AudioManager, and src/locale/ui.js as named components with one-sentence responsibility descriptions.",
+        "FR-STB-003-AC4: README.md contains no references to files or directories that no longer exist after FR-STB-001 and FR-STB-002 are applied."
+      ],
+      "implementation_level": "functional"
+    },
+    {
+      "id": "FR-STB-004",
+      "title": "Update 02_SYSTEM_DESIGN.md to document extracted modules",
+      "description": "The system design document must be updated to include src/audio/AudioManager.js and src/locale/ui.js as documented system components. Each component entry must describe its responsibility, its public interface, and its relationship to GameScene.",
+      "priority": "MUST",
+      "type": "logic",
+      "acceptance_criteria": [
+        "FR-STB-004-AC1: 02_SYSTEM_DESIGN.md contains a component entry for src/audio/AudioManager.js that describes its responsibility (procedural Web Audio synthesis, SFX, ambient loop), its initialization contract (requires an unlocked AudioContext), and which scene(s) consume it.",
+        "FR-STB-004-AC2: 02_SYSTEM_DESIGN.md contains a component entry for src/locale/ui.js that describes its responsibility (UI string constants, language baseline), what it exports, and which scene(s) import it.",
+        "FR-STB-004-AC3: 02_SYSTEM_DESIGN.md reflects that getDifficultyProfile is a pure function extracted from GameScene and is importable independently, with its location documented.",
+        "FR-STB-004-AC4: No component listed in 02_SYSTEM_DESIGN.md references a file path that does not exist in the current repository."
+      ],
+      "implementation_level": "functional"
+    },
+    {
+      "id": "FR-STB-005",
+      "title": "Update 01_REQUIREMENTS.json implementation notes to reflect extracted modules",
+      "description": "The parent 01_REQUIREMENTS.json notes for relevant FRs must be updated so that implementation_level annotations and any inline notes reflect that AudioManager, src/locale/ui.js, and getDifficultyProfile have been extracted into separate modules. No FR priorities, acceptance criteria, or IDs may change.",
+      "priority": "MUST",
+      "type": "logic",
+      "acceptance_criteria": [
+        "FR-STB-005-AC1: After the update, the parent 01_REQUIREMENTS.json is valid JSON that passes schema validation against the original structure (same keys, same FR IDs, no removed FRs).",
+        "FR-STB-005-AC2: The FRs that touch audio (FR-006) and difficulty/wave logic (FR-004) include a note or updated implementation_level that references the extracted module paths (src/audio/AudioManager.js, src/locale/ui.js, getDifficultyProfile).",
+        "FR-STB-005-AC3: No acceptance_criteria text is changed in any parent FR \u2014 only implementation_level or a new notes field may be added."
+      ],
+      "implementation_level": "functional"
+    },
+    {
+      "id": "FR-STB-006",
+      "title": "Replace source-text regex tests (TC-5 through TC-16) with behavioral tests",
+      "description": "The twelve test cases TC-5 through TC-16 currently assert that specific regex patterns exist in GameScene.js source text. These must be replaced with behavioral/functional tests that import and execute modules directly, verifying observable return values and state effects rather than source patterns.",
+      "priority": "MUST",
+      "type": "logic",
+      "acceptance_criteria": [
+        "FR-STB-006-AC1: After the change, npm test exits 0 and all tests pass \u2014 the replacement tests must not introduce failures.",
+        "FR-STB-006-AC2: None of the replacement tests use fs.readFileSync or a regex match on a source file path to satisfy their assertion \u2014 each test imports a module and calls a function or observes a return value.",
+        "FR-STB-006-AC3: The replacement test suite covers at minimum: AudioManager can be instantiated without throwing when called without a live AudioContext (or with a mocked one); src/locale/ui.js exports an object containing at least one string key; getDifficultyProfile(level) returns an object with numeric spawnCount, spawnInterval, and maxActive fields for level inputs 1, 3, and 5.",
+        "FR-STB-006-AC4: Total passing test count after replacement is \u2265 27 (no net reduction in test count vs. the pre-stabilization baseline)."
+      ],
+      "implementation_level": "functional"
+    },
+    {
+      "id": "FR-STB-007",
+      "title": "Update 03_TEST_CASES.json to describe new behavioral test cases",
+      "description": "03_TEST_CASES.json must be updated so that TC-5 through TC-16 entries describe the new behavioral/functional test cases, not the legacy source-text regex assertions. Each updated entry must include an observable expected outcome.",
+      "priority": "MUST",
+      "type": "logic",
+      "acceptance_criteria": [
+        "FR-STB-007-AC1: After the update, 03_TEST_CASES.json is valid JSON.",
+        "FR-STB-007-AC2: TC-5 through TC-16 entries each have a description field that references a module import, a function call, or a state observation \u2014 not a regex pattern or a source file path.",
+        "FR-STB-007-AC3: Each updated TC entry includes an expected_result field with a concrete, verifiable value (e.g., 'returns object with keys spawnCount, spawnInterval, maxActive', 'exports object with \u22651 string key', 'does not throw on construction').",
+        "FR-STB-007-AC4: 04_TEST_RESULTS.json is updated to reflect the current passing state after FR-STB-006 is implemented, with a timestamp matching the execution date."
+      ],
+      "implementation_level": "functional"
+    },
+    {
+      "id": "FR-STB-008",
+      "title": "Fix broken absolute path reference in tests/zombite3/tests.md",
+      "description": "tests/zombite3/tests.md line 18 references an absolute local filesystem path (/Users/cesareyeserrano/Documents/PROJECTS/Drafts/Zombite3/03_TEST_CASES.json) that cannot resolve in any CI environment or on any other developer's machine. This must be replaced with a relative path.",
+      "priority": "MUST",
+      "type": "logic",
+      "acceptance_criteria": [
+        "FR-STB-008-AC1: After the change, tests/zombite3/tests.md contains no absolute filesystem paths (no string beginning with /Users/ or /home/ or a Windows drive letter).",
+        "FR-STB-008-AC2: The reference to 03_TEST_CASES.json is replaced with a relative path that resolves correctly from the project root (e.g., ../../03_TEST_CASES.json or /03_TEST_CASES.json as a repo-root-relative reference)."
+      ],
+      "implementation_level": "functional"
+    },
+    {
+      "id": "FR-STB-009",
+      "title": "Add CI/CD workflow that runs tests and build on every push to main",
+      "description": "A GitHub Actions workflow must be added that runs npm ci, npm test, and npm run build on every push and pull request targeting the main branch. This replaces the manually-snapshotted 04_TEST_RESULTS.json as the authoritative passing signal.",
+      "priority": "MUST",
+      "type": "logic",
+      "acceptance_criteria": [
+        "FR-STB-009-AC1: A workflow file exists at .github/workflows/ with a name that makes its purpose clear (e.g., ci.yml).",
+        "FR-STB-009-AC2: The workflow triggers on push and pull_request events targeting the main branch.",
+        "FR-STB-009-AC3: The workflow runs npm ci, npm test, and npm run build in that order, on a ubuntu-latest runner with Node.js 20.",
+        "FR-STB-009-AC4: If npm test exits non-zero, the workflow job fails and does not proceed to npm run build."
+      ],
+      "implementation_level": "functional"
+    },
+    {
+      "id": "FR-STB-010",
+      "title": "Add Node.js engine version constraint to package.json",
+      "description": "package.json must declare the minimum required Node.js version so that developers on incompatible versions receive an explicit error rather than silent test runner failures.",
+      "priority": "SHOULD",
+      "type": "logic",
+      "acceptance_criteria": [
+        "FR-STB-010-AC1: package.json contains an engines field with { \"node\": \">=18\" }.",
+        "FR-STB-010-AC2: Running npm install on Node.js 16 produces a warning or error citing the engines constraint rather than silently succeeding."
+      ],
+      "implementation_level": "functional"
+    },
+    {
+      "id": "FR-STB-011",
+      "title": "Verify and fix .gitignore to prevent build artifact commits",
+      "description": "The adoption scan identified that dist/ is committed despite being listed in .gitignore, and that .env, *.log, .nyc_output/, and .cache/ are missing from .gitignore. These omissions must be corrected.",
+      "priority": "SHOULD",
+      "type": "logic",
+      "acceptance_criteria": [
+        "FR-STB-011-AC1: .gitignore includes entries for: dist/, .env, *.log, .nyc_output/, .cache/.",
+        "FR-STB-011-AC2: git ls-files dist/ returns empty output (dist/ is not tracked in the repository after the fix).",
+        "FR-STB-011-AC3: git ls-files .env returns empty output (no .env file is tracked)."
+      ],
+      "implementation_level": "functional"
+    }
+  ],
+  "user_stories": [
+    {
+      "id": "US-STB-001",
+      "requirement_id": "FR-STB-001",
+      "as_a": "new collaborator",
+      "i_want": "the docs/ and specs/ directories to contain only current artifacts",
+      "so_that": "I do not encounter Aitri v1.x pipeline directories that contradict the current project state",
+      "acceptance_criteria": [
+        {
+          "id": "FR-STB-001-AC1",
+          "criteria": "After the change, none of the following paths exist in the repository: docs/discovery/, docs/plan/, docs/delivery/, docs/policy/, docs/verification/, specs/approved/, backlog/zombite/."
+        }
+      ]
+    },
+    {
+      "id": "US-STB-002",
+      "requirement_id": "FR-STB-002",
+      "as_a": "new collaborator",
+      "i_want": "docs/ to contain only documents that describe the current state",
+      "so_that": "I do not read a migration plan for a migration that never happened or release notes for a version that has been superseded",
+      "acceptance_criteria": [
+        {
+          "id": "FR-STB-002-AC1",
+          "criteria": "After the change, docs/CANVAS_PURE_MIGRATION_PLAN.md does not exist in the repository working tree."
+        }
+      ]
+    },
+    {
+      "id": "US-STB-003",
+      "requirement_id": "FR-STB-003",
+      "as_a": "new collaborator",
+      "i_want": "README.md to describe the current project accurately",
+      "so_that": "I can clone the repo and have the game running in under 5 minutes with no guessing",
+      "acceptance_criteria": [
+        {
+          "id": "FR-STB-003-AC1",
+          "criteria": "README.md contains a setup section with commands (npm install, npm run dev) that a developer can follow from a clean clone to reach a running game in 5 minutes or less on a standard Node.js 18+ environment."
+        }
+      ]
+    },
+    {
+      "id": "US-STB-004",
+      "requirement_id": "FR-STB-004",
+      "as_a": "returning developer",
+      "i_want": "02_SYSTEM_DESIGN.md to document AudioManager and src/locale/ui.js as system components",
+      "so_that": "I can understand the module boundaries and integration contracts without reading GameScene.js in full",
+      "acceptance_criteria": [
+        {
+          "id": "FR-STB-004-AC1",
+          "criteria": "02_SYSTEM_DESIGN.md contains a component entry for src/audio/AudioManager.js that describes its responsibility (procedural Web Audio synthesis, SFX, ambient loop), its initialization contract (requires an unlocked AudioContext), and which scene(s) consume it."
+        }
+      ]
+    },
+    {
+      "id": "US-STB-005",
+      "requirement_id": "FR-STB-005",
+      "as_a": "returning developer",
+      "i_want": "01_REQUIREMENTS.json to note the extracted module paths in relevant FRs",
+      "so_that": "I can trace from a requirement to its implementation module without reading GameScene.js to find where the logic lives",
+      "acceptance_criteria": [
+        {
+          "id": "FR-STB-005-AC1",
+          "criteria": "After the update, the parent 01_REQUIREMENTS.json is valid JSON that passes schema validation against the original structure (same keys, same FR IDs, no removed FRs)."
+        }
+      ]
+    },
+    {
+      "id": "US-STB-006",
+      "requirement_id": "FR-STB-006",
+      "as_a": "CI/CD pipeline agent",
+      "i_want": "npm test to run behavioral tests against imported modules",
+      "so_that": "a logic regression in AudioManager, getDifficultyProfile, or src/locale/ui.js is caught by the test suite rather than passing silently",
+      "acceptance_criteria": [
+        {
+          "id": "FR-STB-006-AC1",
+          "criteria": "After the change, npm test exits 0 and all tests pass \u2014 the replacement tests must not introduce failures."
+        }
+      ]
+    },
+    {
+      "id": "US-STB-007",
+      "requirement_id": "FR-STB-007",
+      "as_a": "returning developer",
+      "i_want": "03_TEST_CASES.json to describe the behavioral tests in plain language",
+      "so_that": "I can review what each test covers without reading the test implementation file",
+      "acceptance_criteria": [
+        {
+          "id": "FR-STB-007-AC1",
+          "criteria": "After the update, 03_TEST_CASES.json is valid JSON."
+        }
+      ]
+    },
+    {
+      "id": "US-STB-008",
+      "requirement_id": "FR-STB-008",
+      "as_a": "CI/CD pipeline agent",
+      "i_want": "tests/zombite3/tests.md to use a relative path for 03_TEST_CASES.json",
+      "so_that": "the reference resolves correctly in any CI environment, not just on the original developer's machine",
+      "acceptance_criteria": [
+        {
+          "id": "FR-STB-008-AC1",
+          "criteria": "After the change, tests/zombite3/tests.md contains no absolute filesystem paths (no string beginning with /Users/ or /home/ or a Windows drive letter)."
+        }
+      ]
+    },
+    {
+      "id": "US-STB-009",
+      "requirement_id": "FR-STB-009",
+      "as_a": "CI/CD pipeline agent",
+      "i_want": "a GitHub Actions workflow to run tests and build on every push to main",
+      "so_that": "regressions are caught automatically rather than requiring a manual npm test run and 04_TEST_RESULTS.json update",
+      "acceptance_criteria": [
+        {
+          "id": "FR-STB-009-AC1",
+          "criteria": "A workflow file exists at .github/workflows/ with a name that makes its purpose clear (e.g., ci.yml)."
+        }
+      ]
+    },
+    {
+      "id": "US-STB-010",
+      "requirement_id": "FR-STB-010",
+      "as_a": "new collaborator",
+      "i_want": "package.json to declare the minimum Node.js version",
+      "so_that": "I receive an explicit constraint error on an incompatible Node.js version instead of a cryptic test runner failure",
+      "acceptance_criteria": [
+        {
+          "id": "FR-STB-010-AC1",
+          "criteria": "package.json contains an engines field with { \"node\": \">=18\" }."
+        }
+      ]
+    },
+    {
+      "id": "US-STB-011",
+      "requirement_id": "FR-STB-011",
+      "as_a": "returning developer",
+      "i_want": ".gitignore to cover dist/, .env, *.log, .nyc_output/, and .cache/",
+      "so_that": "build artifacts and environment files cannot be accidentally committed to the repository",
+      "acceptance_criteria": [
+        {
+          "id": "FR-STB-011-AC1",
+          "criteria": ".gitignore includes entries for: dist/, .env, *.log, .nyc_output/, .cache/."
+        }
+      ]
+    }
+  ],
+  "non_functional_requirements": [
+    {
+      "id": "NFR-STB-001",
+      "category": "CI/CD",
+      "requirement": "The project must have an automated test-and-build pipeline that runs on every push and PR to main, replacing the manually-snapshotted test status.",
+      "acceptance_criteria": "A GitHub Actions workflow file exists and runs npm ci && npm test && npm run build on ubuntu-latest with Node.js 20 on every push and pull_request targeting main. Job fails on any non-zero exit."
+    },
+    {
+      "id": "NFR-STB-002",
+      "category": "Reliability",
+      "requirement": "All tests must remain passing (100% green) before, during, and after each stabilization change.",
+      "acceptance_criteria": "npm test exits 0 after every individual stabilization commit. No stabilization PR may be merged with a failing test."
+    },
+    {
+      "id": "NFR-STB-003",
+      "category": "Usability",
+      "requirement": "A new contributor must be able to reach a running local game and understand the repo structure without asking for clarification.",
+      "acceptance_criteria": "Following only README.md instructions from a clean clone with Node.js 20, a developer reaches a running game on localhost in 5 minutes or less, with no references to removed files or directories encountered."
+    },
+    {
+      "id": "NFR-STB-004",
+      "category": "Observability",
+      "requirement": "Not applicable to this feature. Zombite3 is a browser-embedded game with no HTTP server or daemon process introduced by stabilization. No request logging NFR applies.",
+      "acceptance_criteria": "N/A \u2014 no server process is introduced. Existing browser console logging behavior is unchanged."
+    },
+    {
+      "id": "NFR-STB-005",
+      "category": "Security",
+      "requirement": "Not applicable beyond what is already covered by parent FR-007 and NFR-004. No new API endpoints, input parameters, or filesystem-reading routes are introduced by stabilization.",
+      "acceptance_criteria": "N/A \u2014 stabilization introduces no new runtime surface. Security posture assessed against parent requirements only."
+    }
+  ],
+  "constraints": [
+    "All changes must keep npm test green at every commit \u2014 no stabilization step may introduce a test failure.",
+    "No FR, acceptance criterion, or ID in the parent 01_REQUIREMENTS.json may be removed or modified beyond adding implementation notes.",
+    "The stabilization feature must not change any runtime behavior observable by end users \u2014 the game plays identically before and after.",
+    "Changes must be completable incrementally \u2014 each FR is independently mergeable without blocking the others."
+  ],
+  "technology_preferences": [
+    "JavaScript ES modules (existing stack)",
+    "Node.js built-in test runner (node --test) \u2014 no new test framework introduced",
+    "GitHub Actions for CI/CD workflow",
+    "Existing Phaser 3.90.x + Vite 5.x stack unchanged"
+  ]
+}

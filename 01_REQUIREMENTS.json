@@ -110,7 +110,8 @@
         "Every major action class — shooting, zombie hit, zombie death, civilian damage, level complete, and game over — has a distinct feedback signal, with audio playback starting within 100ms of the trigger event on an unlocked audio context.",
         "HUD text remains legible at 800x450 and 1280x720 with no overlap that obscures score, level, civilians saved, civilians lost, or accuracy."
       ],
-      "implementation_level": "present"
+      "implementation_level": "present",
+      "implementation_notes": "Audio feedback is implemented via src/audio/AudioManager.js (procedural Web Audio synthesis, SFX dispatch, ambient loop). UI string constants (overlay copy, HUD labels, button text) are centralized in src/locale/ui.js and consumed by UIScene."
     },
     {
       "id": "FR-007",
@@ -123,7 +124,8 @@
         "The browser runtime performs no gameplay-critical remote script execution and no third-party executable asset loading during a standard session.",
         "The embedded or local runtime exposes no admin or debug route to an end user during normal play."
       ],
-      "implementation_level": "present"
+      "implementation_level": "present",
+      "implementation_notes": "Asset provenance validation is handled by src/modules/module-zombite3-service/assetsPolicy.js and securityPolicy.js. Difficulty scaling and wave pacing logic is implemented as the pure function getDifficultyProfile() in src/modules/module-zombite3-service/gameRules.js, extracted from GameScene to support independent testing."
     }
   ],
   "user_stories": [

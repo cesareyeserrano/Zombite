@@ -371,9 +371,76 @@ Consequences: stronger safety and consistency, but stricter asset pipeline disci
 - User impact: gameplay remains technically running but becomes unreadable and product quality drops sharply.
 - Recovery: preserve last-known-safe HUD state, keep overlays minimal, and treat HUD regressions as release blockers.
 
+## 9. Extracted Module Documentation (Stabilization — 2026-03-31)
+
+This section documents modules extracted from GameScene during the v0.1.70 upgrade and adoption-scan refactor. These modules exist in the current codebase and are imported by the scenes listed below. They were not documented in the original system design sections above.
+
+### src/audio/AudioManager.js
+
+**Responsibility:** Manages all Web Audio API interactions including ambient loop synthesis, SFX dispatch, and master gain control. Decouples the audio subsystem from GameScene so audio behavior can be changed or tested without modifying gameplay logic.
+
+**Initialization contract:** `AudioManager` must be constructed with a Phaser `time` reference (`new AudioManager(this.time)`). The audio context is not created at construction — it is created lazily on the first call to `ensure()`, which must happen inside a user interaction handler to satisfy browser autoplay policy. Callers must call `ensure()` on first user interaction before calling `playSfx()`.
+
+**Public interface:**
+- `ensure()` — initializes or resumes the `AudioContext`; safe to call multiple times
+- `setMuted(bool)` — applies gain ramp to mute or unmute; persisted as a property
+- `playSfx(kind)` — synthesizes and plays a named SFX: `shot`, `zombie-hit`, `zombie-kill`, `civilian-error`, `crosshair-warning`, `ui-click`, `wave-alert`, `danger-alert`, `critical-alert`, `civilian-scream`, `powerup-positive`, `rescue-bonus`, `level-clear`, `game-over`
+- `stopAll()` — stops ambient oscillators (used at game over or scene teardown)
+
+**Consumed by:** `GameScene` (primary consumer). Not imported by `UIScene` or `BootScene`.
+
+**Location:** `src/audio/AudioManager.js`
+
+---
+
+### src/locale/ui.js
+
+**Responsibility:** Centralized repository for all player-visible string constants used in UI overlays and in-game copy. Provides a single source of truth for Spanish UI chrome and English in-game feedback strings, simplifying future i18n work.
+
+**Exports:** A named export `UI` — a plain object with string keys covering:
+- overlay eyebrows (`eyebrowDefault`, `eyebrowPaused`, `eyebrowLevelComplete`, `eyebrowGameOver`)
+- rotation guard copy (`rotationTitle`, `rotationBody`)
+- start overlay (`startTitle`, `startBody`, `startButton`, `startEyebrow`, `startFootnote`)
+- pause overlay (`pauseTitle`, `pauseBody`, `pauseContinueButton`, `pauseRestartButton`, `pauseFootnote`)
+- game over overlay (`gameOverTitle`, `gameOverRestartButton`, `gameOverFootnote`)
+- level complete overlay (`levelCompleteNextButton`, `levelCompleteRestartButton`)
+
+**Consumed by:** `UIScene` (primary consumer). Not imported by `GameScene` or `BootScene`.
+
+**Location:** `src/locale/ui.js`
+
+---
+
+### getDifficultyProfile (src/modules/module-zombite3-service/gameRules.js)
+
+**Responsibility:** Pure function extracted from GameScene that returns a difficulty parameter object for a given level number. Isolates all difficulty scaling constants so balance changes require no GameScene edits.
+
+**Signature:** `getDifficultyProfile(level: number): DifficultyProfile`
+
+**Returns a plain object with fields:**
+- `civilianBaseSpeed` — pixels per second for civilian movement
+- `zombieChaseMultiplierMin` / `zombieChaseMultiplierMax` — zombie speed multiplier range
+- `maxZombiesSimultaneous` — cap on active zombie count
+- `maxCiviliansSimultaneous` — cap on active civilian count
+- `spawnIntervalMinMs` / `spawnIntervalMaxMs` — spawn interval bounds in milliseconds
+- `captureDistanceMultiplier` — contact distance scalar for zombie-civilian capture
+- `friendlyFireScorePenalty` / `friendlyFireLifePenalty` — friendly fire penalty values
+- `civilianLostLifePenalty` — life damage on civilian loss
+- `fastZombieChance` — probability of faster zombie variant
+- `routeVariation` — boolean enabling lane route variation
+
+**Consumed by:** `GameScene` (calls `getDifficultyProfile(this.state.level)` at wave start).
+
+**Exported via:** `src/modules/module-zombite3-service/index.js`
+
+---
+
 ## Traceability Checklist
 - [x] Every FR-* is addressed by at least one component
 - [x] Every NFR-* has a corresponding design decision
 - [x] Every ADR has ≥2 options
 - [x] no_go_zone items are not introduced into the architecture
 - [x] Failure blast radius documented for ≥2 critical components
+- [x] AudioManager (src/audio/AudioManager.js) documented with initialization contract and public interface
+- [x] UI string module (src/locale/ui.js) documented with exports and consuming scene
+- [x] getDifficultyProfile documented with return shape and location

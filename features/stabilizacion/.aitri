@@ -1,0 +1,119 @@
+{
+  "currentPhase": 5,
+  "approvedPhases": [
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "completedPhases": [
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "projectName": "stabilizacion",
+  "createdAt": "2026-03-31T18:07:07.801Z",
+  "artifactsDir": "spec",
+  "updatedAt": "2026-03-31T19:51:59.515Z",
+  "driftPhases": [],
+  "events": [
+    {
+      "at": "2026-03-31T18:09:15.207Z",
+      "event": "started",
+      "phase": 1
+    },
+    {
+      "at": "2026-03-31T18:15:58.952Z",
+      "event": "completed",
+      "phase": 1
+    },
+    {
+      "at": "2026-03-31T18:16:23.338Z",
+      "event": "approved",
+      "phase": 1
+    },
+    {
+      "at": "2026-03-31T18:16:23.388Z",
+      "event": "started",
+      "phase": 2
+    },
+    {
+      "at": "2026-03-31T19:13:15.935Z",
+      "event": "completed",
+      "phase": 2
+    },
+    {
+      "at": "2026-03-31T19:13:15.984Z",
+      "event": "approved",
+      "phase": 2
+    },
+    {
+      "at": "2026-03-31T19:49:10.758Z",
+      "event": "completed",
+      "phase": 3
+    },
+    {
+      "at": "2026-03-31T19:49:10.806Z",
+      "event": "approved",
+      "phase": 3
+    },
+    {
+      "at": "2026-03-31T19:51:35.588Z",
+      "event": "completed",
+      "phase": 4
+    },
+    {
+      "at": "2026-03-31T19:51:35.632Z",
+      "event": "approved",
+      "phase": 4
+    },
+    {
+      "at": "2026-03-31T19:51:59.457Z",
+      "event": "completed",
+      "phase": 5
+    },
+    {
+      "at": "2026-03-31T19:51:59.500Z",
+      "event": "approved",
+      "phase": 5
+    }
+  ],
+  "artifactHashes": {
+    "1": "3482bd661ea361a27ed30d4d9039922bbabc1959bd69a51fcba472767d9fc101",
+    "2": "8dfab6764f54895bb269218608430dba3ba0f1bd7a0db7ea0f529acc801722bd",
+    "3": "a8fdba20bc845ad1b4df1bac8dcc6237d027f1f1b61191b8637853f64e64b4b7",
+    "4": "5a1953234d6354e92f0f69d065fab7f0a0ec8392762225a577033eaf232a4e6d",
+    "5": "07ae31e4d1f5ad25a3a5eefb050acd0dbcd067a3d7547cb1ae8612c83ba1cef6"
+  },
+  "lastSession": {
+    "at": "2026-03-31T19:51:59.515Z",
+    "agent": "unknown",
+    "event": "approve deploy",
+    "files_touched": [
+      ".aitri",
+      "01_REQUIREMENTS.json",
+      "02_SYSTEM_DESIGN.md",
+      "README.md",
+      "backlog/zombite/backlog.md",
+      "docs/CANVAS_PURE_MIGRATION_PLAN.md",
+      "docs/CHECKPOINT_20260213-152737.md",
+      "docs/RELEASE_NOTES_V2.md",
+      "docs/delivery/zombite3.json",
+      "docs/delivery/zombite3.md",
+      "docs/discovery/zombite.md",
+      "docs/discovery/zombite3.md",
+      "docs/plan/zombite.md",
+      "docs/plan/zombite3.md",
+      "docs/policy/zombite.json",
+      "docs/policy/zombite3.json",
+      "docs/verification/zombite.json",
+      "docs/verification/zombite3.json",
+      "specs/approved/zombite.md",
+      "specs/approved/zombite3.md",
+      "tests/zombite3/generated/tc-5-to-10-consolidated-runtime.test.mjs"
+    ]
+  }
+}

@@ -1,0 +1,124 @@
+{
+  "feature": "stabilizacion",
+  "implementation_date": "2026-03-31",
+  "changes": [
+    {
+      "fr": "FR-STB-001",
+      "action": "deleted",
+      "paths": [
+        "docs/discovery/",
+        "docs/plan/",
+        "docs/delivery/",
+        "docs/policy/",
+        "docs/verification/",
+        "specs/approved/",
+        "backlog/zombite/"
+      ],
+      "description": "Removed all Aitri v1.x legacy pipeline artifact directories from the repository."
+    },
+    {
+      "fr": "FR-STB-002",
+      "action": "deleted",
+      "paths": [
+        "docs/CANVAS_PURE_MIGRATION_PLAN.md",
+        "docs/RELEASE_NOTES_V2.md",
+        "docs/CHECKPOINT_20260213-152737.md"
+      ],
+      "description": "Removed stale docs: migration plan for unexecuted migration, superseded release notes, and point-in-time checkpoint snapshot."
+    },
+    {
+      "fr": "FR-STB-003",
+      "action": "rewritten",
+      "paths": [
+        "README.md"
+      ],
+      "description": "README.md rewritten to document current stack (Phaser 3.90 + Vite 5 + node --test), architecture components (GameScene, AudioManager, gameRules.js, ui.js), directory structure (src/audio/, src/locale/, src/scenes/, src/modules/), setup commands, controls, and difficulty curve."
+    },
+    {
+      "fr": "FR-STB-004",
+      "action": "appended",
+      "paths": [
+        "02_SYSTEM_DESIGN.md"
+      ],
+      "description": "Appended Section 9 documenting AudioManager (src/audio/AudioManager.js) with initialization contract and public interface, src/locale/ui.js with exports and consuming scene, and getDifficultyProfile with return shape and location."
+    },
+    {
+      "fr": "FR-STB-005",
+      "action": "updated",
+      "paths": [
+        "01_REQUIREMENTS.json"
+      ],
+      "description": "Added implementation_notes fields to FR-006 (referencing AudioManager and src/locale/ui.js) and FR-007 (referencing getDifficultyProfile and extracted module paths). No acceptance criteria, IDs, or priorities changed."
+    },
+    {
+      "fr": "FR-STB-006",
+      "action": "rewritten",
+      "paths": [
+        "tests/zombite3/generated/tc-5-to-10-consolidated-runtime.test.mjs"
+      ],
+      "description": "Replaced 8 source-text regex tests (TC-5 through TC-16) with 23 behavioral tests that import AudioManager, UI locale, GAME_CONSTANTS, getDifficultyProfile, resolveShotTarget, applyShotOutcome, applyCivilianLostPenalty, applyCivilianSaved, buildWaveComposition, calculateAccuracy, and createInitialState directly and verify observable return values. Total test count raised from 12 to 27."
+    },
+    {
+      "fr": "FR-STB-007",
+      "action": "created",
+      "paths": [
+        "features/stabilizacion/spec/03_TEST_CASES.json"
+      ],
+      "description": "03_TEST_CASES.json for the stabilizacion feature describes each test case in terms of module imports, function calls, and observable return values \u2014 not regex patterns."
+    },
+    {
+      "fr": "FR-STB-008",
+      "action": "updated (prior session)",
+      "paths": [
+        "tests/zombite3/tests.md"
+      ],
+      "description": "Absolute path /Users/cesareyeserrano/... replaced with relative path. Already committed."
+    },
+    {
+      "fr": "FR-STB-009",
+      "action": "created (prior session)",
+      "paths": [
+        ".github/workflows/ci.yml"
+      ],
+      "description": "GitHub Actions workflow added. Already committed."
+    },
+    {
+      "fr": "FR-STB-010",
+      "action": "updated (prior session)",
+      "paths": [
+        "package.json"
+      ],
+      "description": "engines field { \"node\": \">=18\" } added. Already committed."
+    },
+    {
+      "fr": "FR-STB-011",
+      "action": "updated (prior session)",
+      "paths": [
+        ".gitignore"
+      ],
+      "description": ".gitignore fixed with dist/, .env, *.log, .nyc_output/, .cache/ entries. Already committed."
+    }
+  ],
+  "files_created": [
+    "features/stabilizacion/FEATURE_IDEA.md",
+    "features/stabilizacion/spec/01_REQUIREMENTS.json",
+    "features/stabilizacion/spec/02_SYSTEM_DESIGN.md",
+    "features/stabilizacion/spec/03_TEST_CASES.json",
+    "features/stabilizacion/spec/04_IMPLEMENTATION_MANIFEST.json",
+    "features/stabilizacion/spec/05_PROOF_OF_COMPLIANCE.json"
+  ],
+  "setup_commands": [
+    "npm install",
+    "npm run dev",
+    "npm test",
+    "npm run build"
+  ],
+  "environment_variables": [],
+  "technical_debt": [],
+  "test_runner": "npm test",
+  "test_files": [
+    "tests/zombite3/generated/tc-1-validate-us-1-primary-behavior.test.mjs",
+    "tests/zombite3/generated/tc-2-validate-us-2-primary-behavior.test.mjs",
+    "tests/zombite3/generated/tc-5-to-10-consolidated-runtime.test.mjs"
+  ]
+}

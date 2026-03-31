@@ -26,9 +26,14 @@
     "failed": 0,
     "skipped": 0
   },
-  "updatedAt": "2026-03-31T17:35:45.811Z",
+  "updatedAt": "2026-03-31T18:07:07.833Z",
   "verifyTimestamp": "2026-03-10T17:51:52.750Z",
   "createdAt": "2026-03-31T17:31:02.595Z",
   "aitriVersion": "0.1.70",
-  "artifactsDir": "."
+  "artifactsDir": ".",
+  "lastSession": {
+    "at": "2026-03-31T18:07:07.833Z",
+    "agent": "unknown",
+    "event": "feature init stabilizacion"
+  }
 }
