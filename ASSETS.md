@@ -1,30 +1,53 @@
-# ASSETS (v1.3)
+# ASSETS (v2.0)
 
-Listado de assets usados en Zombie Rescue Runner, con licencia y créditos.
+Listado resumido de assets usados por Zombie Rescue Runner.  
+La fuente canonica para trazabilidad exacta es [`/public/assets/manifest.json`](/Users/cesareyeserrano/Documents/PROJECTS/Drafts/Zombite3/public/assets/manifest.json).
 
-## Sprites
+## Personajes
 
-| Nombre | Archivo | URL origen | Licencia | Autor / Créditos |
-| --- | --- | --- | --- | --- |
-| Zombie Pixel Sprite | `/public/assets/sprites/zombie-pixel.svg` | `local://zombite3/original-art/zombie-pixel.svg` | CC0-1.0 | Zombite3 Project |
-| Zombie Alpha Sprite | `/public/assets/sprites/zombie-alpha.svg` | `local://zombite3/original-art/zombie-alpha.svg` | CC0-1.0 | Zombite3 Project |
-| Civilian Pixel Sprite | `/public/assets/sprites/civilian-pixel.svg` | `local://zombite3/original-art/civilian-pixel.svg` | CC0-1.0 | Zombite3 Project |
-| Crosshair Pixel Sprite | `/public/assets/sprites/crosshair-pixel.svg` | `local://zombite3/original-art/crosshair-pixel.svg` | CC0-1.0 | Zombite3 Project |
-| Background City Pixel | `/public/assets/sprites/background-city.svg` | `local://zombite3/original-art/background-city.svg` | CC0-1.0 | Zombite3 Project |
-| Muzzle Flash Pixel | `/public/assets/sprites/muzzle-flash.svg` | `local://zombite3/original-art/muzzle-flash.svg` | CC0-1.0 | Zombite3 Project |
-| Hit Marker Pixel | `/public/assets/sprites/hit-marker.svg` | `local://zombite3/original-art/hit-marker.svg` | CC0-1.0 | Zombite3 Project |
-| Powerup Health Sprite | `/public/assets/sprites/powerup-health.svg` | `local://zombite3/original-art/powerup-health.svg` | CC0-1.0 | Zombite3 Project |
-| Powerup Rescue Sprite | `/public/assets/sprites/powerup-rescue.svg` | `local://zombite3/original-art/powerup-rescue.svg` | CC0-1.0 | Zombite3 Project |
-| Safe Checkpoint Sprite | `/public/assets/sprites/safe-checkpoint.svg` | `local://zombite3/original-art/safe-checkpoint.svg` | CC0-1.0 | Zombite3 Project |
-| Military Bunker Sprite | `/public/assets/sprites/safe-bunker.svg` | `local://zombite3/original-art/safe-bunker.svg` | CC0-1.0 | Zombite3 Project |
+| Familia | Archivos |
+| --- | --- |
+| Zombies base | `/public/assets/sprites/zombie-pixel.svg`, `/public/assets/sprites/zombie-pixel-step.svg`, `/public/assets/sprites/zombie-dead.svg` |
+| Zombies variantes | `/public/assets/sprites/zombie-office.svg`, `/public/assets/sprites/zombie-office-step.svg`, `/public/assets/sprites/zombie-urban.svg`, `/public/assets/sprites/zombie-urban-step.svg`, `/public/assets/sprites/zombie-rager.svg`, `/public/assets/sprites/zombie-rager-step.svg` |
+| Zombies especiales | `/public/assets/sprites/zombie-alpha.svg`, `/public/assets/sprites/zombie-alpha-step.svg`, `/public/assets/sprites/zombie-brute.svg`, `/public/assets/sprites/zombie-brute-step.svg` |
+| Civiles base | `/public/assets/sprites/civilian-pixel.svg`, `/public/assets/sprites/civilian-pixel-step.svg`, `/public/assets/sprites/civilian-dead.svg`, `/public/assets/sprites/civilian-infected.svg` |
+| Civiles variantes | `/public/assets/sprites/civilian-office.svg`, `/public/assets/sprites/civilian-office-step.svg`, `/public/assets/sprites/civilian-casual.svg`, `/public/assets/sprites/civilian-casual-step.svg`, `/public/assets/sprites/civilian-urban.svg`, `/public/assets/sprites/civilian-urban-step.svg` |
+
+## UI y FX
+
+| Tipo | Archivos |
+| --- | --- |
+| Mira y disparo | `/public/assets/sprites/crosshair-pixel.svg`, `/public/assets/sprites/muzzle-flash.svg`, `/public/assets/sprites/hit-marker.svg` |
+| Powerups | `/public/assets/sprites/powerup-health.svg`, `/public/assets/sprites/powerup-rescue.svg` |
+
+## Escenario
+
+| Tipo | Archivos |
+| --- | --- |
+| Fondo principal | `/public/assets/sprites/background-city.svg` |
+| Objetivo seguro | `/public/assets/sprites/safe-checkpoint.svg`, `/public/assets/sprites/safe-bunker.svg` |
+| Props de corredor | `/public/assets/sprites/prop-car-wreck.svg`, `/public/assets/sprites/prop-barricade.svg`, `/public/assets/sprites/prop-evac-sign.svg` |
 
 ## Audio
 
-| Nombre | Archivo | URL origen | Licencia | Autor / Créditos |
-| --- | --- | --- | --- | --- |
-| Procedural SFX Profile | `/public/assets/audio/procedural-sfx.json` | `local://zombite3/original-audio/procedural-sfx.json` | CC0-1.0 | Zombite3 Project |
+| Tipo | Archivo |
+| --- | --- |
+| Perfil procedural | `/public/assets/audio/procedural-sfx.json` |
 
 ## Notas
 
-- El audio runtime se genera por WebAudio usando el perfil de `/public/assets/audio/procedural-sfx.json`.
-- Enemigos finales no son emojis ni placeholders geométricos simples.
+- Todo el inventario visual actual usa assets locales trazados en `manifest.json`.
+- El audio runtime se genera por Web Audio con apoyo del perfil procedural.
+- La documentacion y el runtime deben mantenerse sincronizados cada vez que se agreguen nuevas variantes o props.
+
+## Convencion `local://` en manifest.json
+
+El campo `sourceUrl` en `/public/assets/manifest.json` usa el esquema `local://zombite3/original-art/...`.
+Este es un esquema inventado por el proyecto — no es una URL resolvible por ningun navegador o herramienta estandar.
+
+**Significado:** indica que el asset es arte original del proyecto (no descargado de una fuente externa).
+El path despues de `local://zombite3/` es una referencia de archivo interna relativa al directorio `idea/` del proyecto.
+
+**Validacion:** la funcion `isLocalAssetPath` en `securityPolicy.js` valida el campo `path` (que comienza con `/assets/...`),
+no el campo `sourceUrl`. La proveniencia de assets externos debe documentarse en `sourceUrl` con una URL real (HTTP/S)
+o con un SHA de commit. Para arte original, `local://` es aceptable pero debe estar documentado aqui.

@@ -1,0 +1,83 @@
+{
+  "executed_at": "2026-03-10T00:00:00.000Z",
+  "test_runner": "npm test",
+  "verification_commands": [
+    "npm test",
+    "npm run build"
+  ],
+  "suite_summary": {
+    "total_tests": 27,
+    "passed": 27,
+    "failed": 0,
+    "skipped": 0
+  },
+  "fr_coverage": [
+    {
+      "fr_id": "FR-001",
+      "status": "covered",
+      "evidence": [
+        "TC-001",
+        "TC-002",
+        "TC-003"
+      ]
+    },
+    {
+      "fr_id": "FR-002",
+      "status": "covered",
+      "evidence": [
+        "TC-004",
+        "TC-005",
+        "TC-006"
+      ]
+    },
+    {
+      "fr_id": "FR-003",
+      "status": "covered",
+      "evidence": [
+        "TC-007",
+        "TC-008",
+        "TC-009"
+      ]
+    },
+    {
+      "fr_id": "FR-004",
+      "status": "covered",
+      "evidence": [
+        "TC-010",
+        "TC-011",
+        "TC-012"
+      ]
+    },
+    {
+      "fr_id": "FR-005",
+      "status": "covered",
+      "evidence": [
+        "TC-013",
+        "TC-014",
+        "TC-015"
+      ]
+    },
+    {
+      "fr_id": "FR-006",
+      "status": "covered",
+      "evidence": [
+        "TC-016",
+        "TC-017",
+        "TC-018"
+      ]
+    },
+    {
+      "fr_id": "FR-007",
+      "status": "covered",
+      "evidence": [
+        "TC-019",
+        "TC-020",
+        "TC-021"
+      ]
+    }
+  ],
+  "notes": [
+    "Automated suite is green on the current Phaser baseline.",
+    "Production build succeeds; Vite reports a non-blocking large chunk warning."
+  ]
+}

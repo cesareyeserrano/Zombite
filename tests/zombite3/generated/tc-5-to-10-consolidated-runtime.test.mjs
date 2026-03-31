@@ -48,9 +48,9 @@ test("tc_7_validate_zombie_targets_civilians_not_mouse", async () => {
 // TC-8: Validate consolidated damage rules and overlap priority
 test("tc_8_validate_damage_rules_and_target_priority", async () => {
   const { scene, rules } = await loadSources();
-  assert.match(rules, /civilianPenaltyScore: 50/);
-  assert.match(rules, /civilianPenaltyLife: 15/);
-  assert.match(rules, /civilianLossLife: 15/);
+  assert.match(rules, /civilianPenaltyScore: 15/);
+  assert.match(rules, /civilianPenaltyLife: 10/);
+  assert.match(rules, /civilianLossLife: 10/);
   assert.match(scene, /"zombie-brute": 4/);
   assert.match(scene, /"zombie-elite": 3/);
   assert.match(scene, /zombie: 2/);
@@ -65,7 +65,10 @@ test("tc_9_validate_alpha_brute_by_level_and_brute_loss", async () => {
   assert.match(scene, /if \(this\.state\.level >= 5\)/);
   assert.match(scene, /zombie-brute/);
   assert.match(scene, /const maxHp = isBrute \? 6 : isElite \? 3 : 1/);
-  assert.match(scene, /const lifeDamage = isBrute \? 40 : 15/);
+  assert.match(scene, /const lifeDamageByType = \{/);
+  assert.match(scene, /zombie: 10/);
+  assert.match(scene, /"zombie-elite": 15/);
+  assert.match(scene, /"zombie-brute": 20/);
 });
 
 // TC-10: Validate airborne power-up readability and effect contract
@@ -86,7 +89,8 @@ test("tc_15_validate_infection_mechanic", async () => {
 
 // TC-16: Validate extreme pacing and off-screen protection
 test("tc_16_validate_pacing_and_offscreen_protection", async () => {
-  const { scene } = await loadSources();
-  assert.match(scene, /spawnIntervalMinMs: 1200/);
+  const { scene, rules } = await loadSources();
+  // spawnIntervalMinMs lives in gameRules.js (getDifficultyProfile) after extraction
+  assert.match(rules, /spawnIntervalMinMs: 1200/);
   assert.match(scene, /if \(civil\.x < 30\) continue/);
 });

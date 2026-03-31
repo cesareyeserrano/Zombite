@@ -11,6 +11,9 @@ const config = {
   backgroundColor: "#020617",
   pixelArt: true,
   scene: [BootScene, GameScene, UIScene],
+  dom: {
+    createContainer: true
+  },
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH

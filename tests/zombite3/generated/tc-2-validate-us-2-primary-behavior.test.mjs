@@ -1,6 +1,6 @@
 // TC-2: Validate us-2 primary behavior
 // Acceptance Criteria: AC-1
-// AC-1: Given a running wave with at least one civilian visible, when the player left-clicks and hits that civilian, then score decreases by 50, player life decreases by 15 (or one equivalent strike as specified), and the game shows visual and audio penalty feedback immediately.
+// AC-1: Given shipped gameplay-critical assets are present, when the asset inventory is validated, then all runtime-critical assets remain local-safe and documented.
 import test from "node:test";
 import assert from "node:assert/strict";
 

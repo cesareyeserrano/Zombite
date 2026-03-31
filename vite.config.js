@@ -10,5 +10,18 @@ export default defineConfig({
   preview: {
     host: "127.0.0.1",
     port: 4173
+  },
+  build: {
+    // Phaser minified is ~1.5 MB — accepted and documented. Warn above 2 MB.
+    chunkSizeWarningLimit: 2000,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes("node_modules/phaser")) {
+            return "phaser-vendor";
+          }
+        }
+      }
+    }
   }
 });

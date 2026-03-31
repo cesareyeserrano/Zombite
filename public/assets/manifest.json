@@ -10,10 +10,178 @@
       "author": "Zombite3 Project"
     },
     {
+      "name": "Zombie Pixel Step Sprite",
+      "path": "/assets/sprites/zombie-pixel-step.svg",
+      "type": "enemy",
+      "sourceUrl": "local://zombite3/original-art/zombie-pixel-step.svg",
+      "license": "CC0-1.0",
+      "author": "Zombite3 Project"
+    },
+    {
+      "name": "Zombie Alpha Sprite",
+      "path": "/assets/sprites/zombie-alpha.svg",
+      "type": "enemy",
+      "sourceUrl": "local://zombite3/original-art/zombie-alpha.svg",
+      "license": "CC0-1.0",
+      "author": "Zombite3 Project"
+    },
+    {
+      "name": "Zombie Alpha Step Sprite",
+      "path": "/assets/sprites/zombie-alpha-step.svg",
+      "type": "enemy",
+      "sourceUrl": "local://zombite3/original-art/zombie-alpha-step.svg",
+      "license": "CC0-1.0",
+      "author": "Zombite3 Project"
+    },
+    {
+      "name": "Zombie Office Sprite",
+      "path": "/assets/sprites/zombie-office.svg",
+      "type": "enemy",
+      "sourceUrl": "local://zombite3/original-art/zombie-office.svg",
+      "license": "CC0-1.0",
+      "author": "Zombite3 Project"
+    },
+    {
+      "name": "Zombie Office Step Sprite",
+      "path": "/assets/sprites/zombie-office-step.svg",
+      "type": "enemy",
+      "sourceUrl": "local://zombite3/original-art/zombie-office-step.svg",
+      "license": "CC0-1.0",
+      "author": "Zombite3 Project"
+    },
+    {
+      "name": "Zombie Urban Sprite",
+      "path": "/assets/sprites/zombie-urban.svg",
+      "type": "enemy",
+      "sourceUrl": "local://zombite3/original-art/zombie-urban.svg",
+      "license": "CC0-1.0",
+      "author": "Zombite3 Project"
+    },
+    {
+      "name": "Zombie Urban Step Sprite",
+      "path": "/assets/sprites/zombie-urban-step.svg",
+      "type": "enemy",
+      "sourceUrl": "local://zombite3/original-art/zombie-urban-step.svg",
+      "license": "CC0-1.0",
+      "author": "Zombite3 Project"
+    },
+    {
+      "name": "Zombie Rager Sprite",
+      "path": "/assets/sprites/zombie-rager.svg",
+      "type": "enemy",
+      "sourceUrl": "local://zombite3/original-art/zombie-rager.svg",
+      "license": "CC0-1.0",
+      "author": "Zombite3 Project"
+    },
+    {
+      "name": "Zombie Rager Step Sprite",
+      "path": "/assets/sprites/zombie-rager-step.svg",
+      "type": "enemy",
+      "sourceUrl": "local://zombite3/original-art/zombie-rager-step.svg",
+      "license": "CC0-1.0",
+      "author": "Zombite3 Project"
+    },
+    {
+      "name": "Zombie Brute Sprite",
+      "path": "/assets/sprites/zombie-brute.svg",
+      "type": "enemy",
+      "sourceUrl": "local://zombite3/original-art/zombie-brute.svg",
+      "license": "CC0-1.0",
+      "author": "Zombite3 Project"
+    },
+    {
+      "name": "Zombie Brute Step Sprite",
+      "path": "/assets/sprites/zombie-brute-step.svg",
+      "type": "enemy",
+      "sourceUrl": "local://zombite3/original-art/zombie-brute-step.svg",
+      "license": "CC0-1.0",
+      "author": "Zombite3 Project"
+    },
+    {
+      "name": "Zombie Dead Sprite",
+      "path": "/assets/sprites/zombie-dead.svg",
+      "type": "enemy",
+      "sourceUrl": "local://zombite3/original-art/zombie-dead.svg",
+      "license": "CC0-1.0",
+      "author": "Zombite3 Project"
+    },
+    {
       "name": "Civilian Pixel Sprite",
       "path": "/assets/sprites/civilian-pixel.svg",
       "type": "npc",
       "sourceUrl": "local://zombite3/original-art/civilian-pixel.svg",
+      "license": "CC0-1.0",
+      "author": "Zombite3 Project"
+    },
+    {
+      "name": "Civilian Pixel Step Sprite",
+      "path": "/assets/sprites/civilian-pixel-step.svg",
+      "type": "npc",
+      "sourceUrl": "local://zombite3/original-art/civilian-pixel-step.svg",
+      "license": "CC0-1.0",
+      "author": "Zombite3 Project"
+    },
+    {
+      "name": "Civilian Dead Sprite",
+      "path": "/assets/sprites/civilian-dead.svg",
+      "type": "npc",
+      "sourceUrl": "local://zombite3/original-art/civilian-dead.svg",
+      "license": "CC0-1.0",
+      "author": "Zombite3 Project"
+    },
+    {
+      "name": "Civilian Infected Sprite",
+      "path": "/assets/sprites/civilian-infected.svg",
+      "type": "npc",
+      "sourceUrl": "local://zombite3/original-art/civilian-infected.svg",
+      "license": "CC0-1.0",
+      "author": "Zombite3 Project"
+    },
+    {
+      "name": "Civilian Office Sprite",
+      "path": "/assets/sprites/civilian-office.svg",
+      "type": "npc",
+      "sourceUrl": "local://zombite3/original-art/civilian-office.svg",
+      "license": "CC0-1.0",
+      "author": "Zombite3 Project"
+    },
+    {
+      "name": "Civilian Office Step Sprite",
+      "path": "/assets/sprites/civilian-office-step.svg",
+      "type": "npc",
+      "sourceUrl": "local://zombite3/original-art/civilian-office-step.svg",
+      "license": "CC0-1.0",
+      "author": "Zombite3 Project"
+    },
+    {
+      "name": "Civilian Casual Sprite",
+      "path": "/assets/sprites/civilian-casual.svg",
+      "type": "npc",
+      "sourceUrl": "local://zombite3/original-art/civilian-casual.svg",
+      "license": "CC0-1.0",
+      "author": "Zombite3 Project"
+    },
+    {
+      "name": "Civilian Casual Step Sprite",
+      "path": "/assets/sprites/civilian-casual-step.svg",
+      "type": "npc",
+      "sourceUrl": "local://zombite3/original-art/civilian-casual-step.svg",
+      "license": "CC0-1.0",
+      "author": "Zombite3 Project"
+    },
+    {
+      "name": "Civilian Urban Sprite",
+      "path": "/assets/sprites/civilian-urban.svg",
+      "type": "npc",
+      "sourceUrl": "local://zombite3/original-art/civilian-urban.svg",
+      "license": "CC0-1.0",
+      "author": "Zombite3 Project"
+    },
+    {
+      "name": "Civilian Urban Step Sprite",
+      "path": "/assets/sprites/civilian-urban-step.svg",
+      "type": "npc",
+      "sourceUrl": "local://zombite3/original-art/civilian-urban-step.svg",
       "license": "CC0-1.0",
       "author": "Zombite3 Project"
     },
@@ -66,10 +234,42 @@
       "author": "Zombite3 Project"
     },
     {
+      "name": "Wrecked Car Prop",
+      "path": "/assets/sprites/prop-car-wreck.svg",
+      "type": "background",
+      "sourceUrl": "local://zombite3/original-art/prop-car-wreck.svg",
+      "license": "CC0-1.0",
+      "author": "Zombite3 Project"
+    },
+    {
+      "name": "Barricade Prop",
+      "path": "/assets/sprites/prop-barricade.svg",
+      "type": "background",
+      "sourceUrl": "local://zombite3/original-art/prop-barricade.svg",
+      "license": "CC0-1.0",
+      "author": "Zombite3 Project"
+    },
+    {
+      "name": "Evacuation Sign Prop",
+      "path": "/assets/sprites/prop-evac-sign.svg",
+      "type": "background",
+      "sourceUrl": "local://zombite3/original-art/prop-evac-sign.svg",
+      "license": "CC0-1.0",
+      "author": "Zombite3 Project"
+    },
+    {
       "name": "Safe Checkpoint Sprite",
       "path": "/assets/sprites/safe-checkpoint.svg",
       "type": "ui",
       "sourceUrl": "local://zombite3/original-art/safe-checkpoint.svg",
+      "license": "CC0-1.0",
+      "author": "Zombite3 Project"
+    },
+    {
+      "name": "Military Bunker Sprite",
+      "path": "/assets/sprites/safe-bunker.svg",
+      "type": "ui",
+      "sourceUrl": "local://zombite3/original-art/safe-bunker.svg",
       "license": "CC0-1.0",
       "author": "Zombite3 Project"
     },

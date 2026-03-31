@@ -8,7 +8,8 @@ export {
   applyCivilianSaved,
   registerShotAttempt,
   registerShotHit,
-  buildWaveComposition
+  buildWaveComposition,
+  getDifficultyProfile
 } from "./gameRules.js";
 
 export { isLocalAssetPath, evaluateSecurityControls } from "./securityPolicy.js";

@@ -1,0 +1,219 @@
+{
+  "project_name": "Zombite3",
+  "project_summary": "Professional upgrade of the current beta zombie rescue shooter into an embeddable web minigame that also runs locally for QA. Product analysis: North Star KPI = 90% of first-time players start an active run within 30 seconds of load. JTBD = give busy users a short, low-friction break with immediately understandable zombie rescue gameplay. Guardrail metric = first playable state appears within 3 seconds on a standard desktop broadband/browser setup after assets are cached for the first session.",
+  "product_analysis": {
+    "north_star_kpi": "90% of first-time players reach an active run within 30 seconds of initial load.",
+    "jtbd": "Give busy users a short, low-friction break with an immediately understandable rescue shooter session they can play inside another web surface.",
+    "guardrail_metric": "First playable state appears within 3 seconds on a standard modern desktop browser after the initial asset load for a repeat session."
+  },
+  "user_personas": [
+    {
+      "role": "Office-break player",
+      "tech_level": "low",
+      "goal": "Start a short session immediately and understand who to protect and who to shoot without reading a manual.",
+      "pain_point": "Low tolerance for setup friction, unclear rules, and delayed feedback."
+    },
+    {
+      "role": "Host-site integrator",
+      "tech_level": "mid",
+      "goal": "Embed the game inside a bounded web container and trust that it behaves consistently without extra user setup.",
+      "pain_point": "Embedded experiences often break layout constraints, load too slowly, or feel unfinished."
+    },
+    {
+      "role": "Product owner / QA operator",
+      "tech_level": "mid",
+      "goal": "Validate that the game is coherent, runnable locally, and aligned with the intended product direction.",
+      "pain_point": "Legacy docs, code, and tests can drift and make it hard to judge readiness."
+    }
+  ],
+  "no_go_zone": [
+    "No backend server, user accounts, or cloud persistence — this delivery remains a self-contained web game with local-only persistence.",
+    "No multiplayer, matchmaking, or shared-session features — the game is single-player only.",
+    "No engine rewrite away from Phaser in this delivery — the current implementation baseline is upgraded rather than replaced.",
+    "No runtime dependency on third-party HTTP APIs or remote executable scripts — gameplay must stay self-contained.",
+    "No realistic gore or graphic horror presentation — violence stays stylized and office-safe."
+  ],
+  "functional_requirements": [
+    {
+      "id": "FR-001",
+      "title": "Fast-start embeddable session",
+      "description": "The game must support a short-session embedded play flow while remaining runnable locally for development and QA, with the first playable state appearing quickly and without extra installation for the end user.",
+      "priority": "MUST",
+      "type": "UX",
+      "acceptance_criteria": [
+        "A local operator can reach the first playable state with the documented setup flow in 5 minutes or less from the repository root on a standard Node.js environment.",
+        "In a standard 800x450 embedded container, the game renders without clipping the main playfield or hiding primary controls.",
+        "A first-time player can start an active run within 30 seconds of the initial load using only visible on-screen instructions."
+      ],
+      "implementation_level": "present"
+    },
+    {
+      "id": "FR-002",
+      "title": "Readable rescue-shooter core loop",
+      "description": "The active play loop must make the player protect civilians moving toward a bunker while shooting zombies through a fixed-camera aiming model with immediate, legible outcomes.",
+      "priority": "MUST",
+      "type": "UX",
+      "acceptance_criteria": [
+        "The custom crosshair remains visible throughout active gameplay and primary targets can be distinguished in less than 1 second by a first-time observer.",
+        "The player can aim with the mouse and fire with left click in every active gameplay state without additional tutorial steps.",
+        "A first-time player can identify the bunker as the civilian destination and safe endpoint within 30 seconds of entering the first run."
+      ],
+      "implementation_level": "present"
+    },
+    {
+      "id": "FR-003",
+      "title": "Deterministic target and penalty rules",
+      "description": "Shots, civilian loss, and enemy contact must follow a single coherent rule set so that mistakes and threats always produce the same observable consequences.",
+      "priority": "MUST",
+      "type": "logic",
+      "acceptance_criteria": [
+        "A player-shot civilian immediately applies -15 score and -10 life with negative visual and audio feedback in the same interaction or next rendered frame.",
+        "Normal, elite/alpha, and brute zombie contact apply 10, 15, and 20 life damage respectively and each successful contact increments civilians lost by exactly 1.",
+        "When multiple entities overlap under the crosshair, hit resolution returns the same target outcome across repeated identical overlap conditions."
+      ],
+      "implementation_level": "present"
+    },
+    {
+      "id": "FR-004",
+      "title": "Escalating pressure with three zombie categories",
+      "description": "The game must increase pressure across levels while preserving three distinct zombie categories and a flexible mixed-threat wave composition that supports civilian protection decisions.",
+      "priority": "MUST",
+      "type": "logic",
+      "acceptance_criteria": [
+        "The game exposes exactly three enemy categories in the product baseline: normal zombie, elite/alpha zombie, and brute zombie.",
+        "Each level increases threat through at least one measurable factor such as spawn rate, active threat volume, enemy durability, or chase pressure.",
+        "Wave composition includes both threat and protection pressure, but requirements do not depend on a fixed zombie-to-civilian spawn ratio."
+      ],
+      "implementation_level": "present"
+    },
+    {
+      "id": "FR-005",
+      "title": "Scoring, level closure, and record persistence",
+      "description": "The game must track score, level state, and end-of-run outcome clearly, and retain the highest score locally so players can compare results across sessions.",
+      "priority": "MUST",
+      "type": "persistence",
+      "acceptance_criteria": [
+        "The HUD displays current score, level, civilians saved, civilians lost, and current or best run context during active gameplay.",
+        "A run ends with a clear game-over or level-closure state that reports the player's achieved score before restart or continuation.",
+        "The highest recorded score persists across a browser reload in 100% of standard local runs where localStorage is available."
+      ],
+      "implementation_level": "present"
+    },
+    {
+      "id": "FR-006",
+      "title": "Professional presentation quality baseline",
+      "description": "The product must ship with final-quality visual, UI, and audio feedback that reads as a finished casual minigame rather than a technical prototype.",
+      "priority": "MUST",
+      "type": "UX",
+      "acceptance_criteria": [
+        "Gameplay-critical characters, bunker, crosshair, and HUD use a consistent visual style with no placeholder geometry or mixed final-art styles in the shipped build.",
+        "Every major action class — shooting, zombie hit, zombie death, civilian damage, level complete, and game over — has a distinct feedback signal, with audio playback starting within 100ms of the trigger event on an unlocked audio context.",
+        "HUD text remains legible at 800x450 and 1280x720 with no overlap that obscures score, level, civilians saved, civilians lost, or accuracy."
+      ],
+      "implementation_level": "present"
+    },
+    {
+      "id": "FR-007",
+      "title": "Local asset provenance and runtime safety",
+      "description": "All shipped gameplay-critical assets and runtime behaviors must be traceable, local, and safe for a browser-embedded environment.",
+      "priority": "MUST",
+      "type": "security",
+      "acceptance_criteria": [
+        "100% of gameplay-critical visual and audio assets loaded by the shipped runtime are listed in the project asset inventory and documented in ASSETS.md.",
+        "The browser runtime performs no gameplay-critical remote script execution and no third-party executable asset loading during a standard session.",
+        "The embedded or local runtime exposes no admin or debug route to an end user during normal play."
+      ],
+      "implementation_level": "present"
+    }
+  ],
+  "user_stories": [
+    {
+      "id": "US-001",
+      "requirement_id": "FR-001",
+      "as_a": "office-break player",
+      "i_want": "to start a run immediately inside a web page or local test build",
+      "so_that": "I can play without setup friction"
+    },
+    {
+      "id": "US-002",
+      "requirement_id": "FR-002",
+      "as_a": "first-time player",
+      "i_want": "to understand targets, threats, and safe goals immediately",
+      "so_that": "the game feels readable and fair"
+    },
+    {
+      "id": "US-003",
+      "requirement_id": "FR-003",
+      "as_a": "player",
+      "i_want": "friendly fire and zombie contact to follow one consistent rule set",
+      "so_that": "mistakes and danger feel predictable"
+    },
+    {
+      "id": "US-004",
+      "requirement_id": "FR-004",
+      "as_a": "repeat player",
+      "i_want": "difficulty to escalate through distinct zombie categories and rising pressure",
+      "so_that": "the session remains tense and replayable"
+    },
+    {
+      "id": "US-005",
+      "requirement_id": "FR-005",
+      "as_a": "score-driven player",
+      "i_want": "my run results and high score to be visible and persistent",
+      "so_that": "I can compare performance across sessions"
+    },
+    {
+      "id": "US-006",
+      "requirement_id": "FR-006",
+      "as_a": "host-site visitor",
+      "i_want": "the game to look and sound finished",
+      "so_that": "it feels like a real product and not a prototype"
+    },
+    {
+      "id": "US-007",
+      "requirement_id": "FR-007",
+      "as_a": "product owner",
+      "i_want": "runtime assets and browser behavior to be local and traceable",
+      "so_that": "the game is safe to embed and maintain"
+    }
+  ],
+  "non_functional_requirements": [
+    {
+      "id": "NFR-001",
+      "category": "Performance",
+      "requirement": "The game must reach a playable embedded or local session quickly enough for short-break usage.",
+      "acceptance_criteria": "On a standard modern desktop browser, the first playable state appears within 3 seconds for a repeat session after the initial asset load."
+    },
+    {
+      "id": "NFR-002",
+      "category": "Usability",
+      "requirement": "The game must remain understandable to first-time players with minimal instruction.",
+      "acceptance_criteria": "At least 90% of first-time internal test players can identify the goal, valid targets, and loss condition within 30 seconds of first playable state."
+    },
+    {
+      "id": "NFR-003",
+      "category": "Reliability",
+      "requirement": "The repository must support repeatable development verification from the root project workspace.",
+      "acceptance_criteria": "Documented local setup, automated tests, and production build commands complete successfully from the repository root."
+    },
+    {
+      "id": "NFR-004",
+      "category": "Security",
+      "requirement": "Gameplay-critical runtime behavior must remain local, deterministic, and safe for embedding.",
+      "acceptance_criteria": "A standard session performs no runtime fetch of executable third-party scripts and no unbounded external control surface is exposed to end users."
+    }
+  ],
+  "constraints": [
+    "Continue from the current Phaser 3 + Vite implementation baseline.",
+    "Support local execution for development and QA while targeting embeddable web delivery.",
+    "No backend, multiplayer, online accounts, or cloud save.",
+    "No realistic gore.",
+    "Assets must remain local and documented in ASSETS.md."
+  ],
+  "technology_preferences": [
+    "JavaScript ES modules",
+    "Phaser 3.90.x",
+    "Vite 5.x",
+    "Desktop-first browser experience with embeddable container support"
+  ]
+}

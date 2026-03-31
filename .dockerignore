@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.env
+*.log
+.nyc_output/
+.cache/
+.DS_Store
+.git/
+.github/
+coverage/
+test-results/

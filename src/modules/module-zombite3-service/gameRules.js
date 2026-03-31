@@ -3,9 +3,9 @@ export const GAME_CONSTANTS = {
   maxLife: 100,
   zombieKillScore: 10,
   eliteZombieBonusScore: 30,
-  civilianPenaltyScore: 50,
-  civilianPenaltyLife: 15,
-  civilianLossLife: 15,
+  civilianPenaltyScore: 15,
+  civilianPenaltyLife: 10,
+  civilianLossLife: 10,
   healthPowerupValue: 20,
   rescuePowerupScore: 50,
   shotHitRadius: 26,
@@ -16,9 +16,10 @@ export const GAME_CONSTANTS = {
 };
 
 const TARGET_PRIORITY = {
-  civilian: 2,
-  zombie: 1,
-  "zombie-elite": 1,
+  "zombie-brute": 4,
+  "zombie-elite": 3,
+  zombie: 2,
+  civilian: 1,
   "powerup-health": 0,
   "powerup-rescue": 0
 };
@@ -272,9 +273,69 @@ function withGameOver(state) {
   };
 }
 
+export function getDifficultyProfile(level) {
+  if (level <= 2) {
+    return {
+      civilianBaseSpeed: 110,
+      zombieChaseMultiplierMin: 1.3,
+      zombieChaseMultiplierMax: 1.5,
+      maxZombiesSimultaneous: 4,
+      maxCiviliansSimultaneous: 3,
+      spawnIntervalMinMs: 1200,
+      spawnIntervalMaxMs: 1800,
+      captureDistanceMultiplier: 0.85,
+      friendlyFireScorePenalty: 15,
+      friendlyFireLifePenalty: 10,
+      civilianLostLifePenalty: 10,
+      fastZombieChance: 0.1,
+      routeVariation: false
+    };
+  }
+  if (level <= 4) {
+    return {
+      civilianBaseSpeed: 90,
+      zombieChaseMultiplierMin: 1.2,
+      zombieChaseMultiplierMax: 1.3,
+      maxZombiesSimultaneous: level === 3 ? 3 : 4,
+      maxCiviliansSimultaneous: 3,
+      spawnIntervalMinMs: 2850,
+      spawnIntervalMaxMs: 3150,
+      captureDistanceMultiplier: 1,
+      friendlyFireScorePenalty: 15,
+      friendlyFireLifePenalty: 10,
+      civilianLostLifePenalty: 10,
+      fastZombieChance: 0.25,
+      routeVariation: true
+    };
+  }
+  return {
+    civilianBaseSpeed: 94,
+    zombieChaseMultiplierMin: 1.1,
+    zombieChaseMultiplierMax: 1.3,
+    maxZombiesSimultaneous: level >= 10 ? 7 : 5,
+    maxCiviliansSimultaneous: level >= 10 ? 5 : 3,
+    spawnIntervalMinMs: level >= 10 ? 1100 : 2350,
+    spawnIntervalMaxMs: level >= 10 ? 1300 : 2650,
+    captureDistanceMultiplier: 1.05,
+    friendlyFireScorePenalty: 15,
+    friendlyFireLifePenalty: 10,
+    civilianLostLifePenalty: 10,
+    fastZombieChance: 0.4,
+    routeVariation: true
+  };
+}
+
+// NOTE: buildWaveComposition returns { zombies, civilians, queue }.
+// In the current wave orchestration (GameScene.beginWave), only the
+// `civilians` count is used to populate the spawn queue. The `queue`
+// array (zombie entries) is intentionally not consumed there — zombies
+// enter via schedulePursuerForCivilian (one pursuer paired per civilian).
+// The `zombies` and `queue` fields remain for test coverage of the
+// composition model (TC-8 family) and for future wave designs that may
+// use direct zombie spawning instead of the pursuer-pair model.
 export function buildWaveComposition(totalSpawns) {
-  const zombies = Math.max(1, Math.round(totalSpawns * 0.7));
-  const civilians = Math.max(1, totalSpawns - zombies);
+  const civilians = Math.max(1, Math.ceil(totalSpawns / 2));
+  const zombies = Math.max(1, totalSpawns - civilians);
 
   const queue = [];
   for (let i = 0; i < zombies; i += 1) {

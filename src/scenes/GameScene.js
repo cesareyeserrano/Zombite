@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { AudioManager } from "../audio/AudioManager.js";
 import {
   GAME_CONSTANTS,
   createInitialState,
@@ -9,6 +10,7 @@ import {
   registerShotAttempt,
   registerShotHit,
   buildWaveComposition,
+  getDifficultyProfile,
   evaluateSecurityControls
 } from "../modules/module-zombite3-service/index.js";
 
@@ -21,10 +23,25 @@ const GROUND_Y = 430;
 const DANGER_DISTANCE_PX = 100;
 
 const LANES = [
-  { id: "back", y: GROUND_Y, scale: 0.7, shadowScale: 0.7, depth: 180 },
+  { id: "back", y: GROUND_Y - 20, scale: 0.7, shadowScale: 0.7, depth: 180 },
   { id: "mid", y: GROUND_Y, scale: 0.85, shadowScale: 0.85, depth: 240 },
-  { id: "front", y: GROUND_Y, scale: 1, shadowScale: 1, depth: 320 }
+  { id: "front", y: GROUND_Y + 28, scale: 1, shadowScale: 1, depth: 320 }
 ];
+
+const CIVILIAN_TEXTURE_KEYS = ["npc-civilian", "npc-civilian-office", "npc-civilian-casual", "npc-civilian-urban"];
+const ZOMBIE_TEXTURE_KEYS = ["enemy-zombie", "enemy-zombie-office", "enemy-zombie-urban", "enemy-zombie-rager"];
+const ALT_TEXTURE_MAP = {
+  "npc-civilian": "npc-civilian-step",
+  "npc-civilian-office": "npc-civilian-office-step",
+  "npc-civilian-casual": "npc-civilian-casual-step",
+  "npc-civilian-urban": "npc-civilian-urban-step",
+  "enemy-zombie": "enemy-zombie-step",
+  "enemy-zombie-office": "enemy-zombie-office-step",
+  "enemy-zombie-urban": "enemy-zombie-urban-step",
+  "enemy-zombie-rager": "enemy-zombie-rager-step",
+  "enemy-zombie-alpha": "enemy-zombie-alpha-step",
+  "enemy-zombie-brute": "enemy-zombie-brute-step"
+};
 
 export class GameScene extends Phaser.Scene {
   constructor() {
@@ -37,7 +54,6 @@ export class GameScene extends Phaser.Scene {
     this.waveInProgress = false;
     this.started = false;
     this.isPaused = false;
-    this.audioContext = null;
     this.lastShotAt = 0;
     this.levelDurationSec = 55;
     this.recentCivilLossTimes = [];
@@ -47,6 +63,8 @@ export class GameScene extends Phaser.Scene {
     this.civilianVisualPool = [];
     this.shotTrailPool = [];
     this.particlePool = [];
+    this.audioMuted = false;
+    this.lastCriticalAlertAt = 0;
   }
 
   create() {
@@ -58,8 +76,15 @@ export class GameScene extends Phaser.Scene {
     this.background = this.add
       .image(this.center.x, this.center.y, "bg-city")
       .setDisplaySize(VIEWPORT.width + 160, VIEWPORT.height + 120)
-      .setDepth(0);
+      .setDepth(0)
+      .setTint(0x444444); // Oscurecer fondo significativamente para contraste
+
     this.createParallaxLayers();
+    this.createAtmosphereLayers();
+
+    // Viñeta para centrar atención
+    this.add.rectangle(this.center.x, this.center.y, VIEWPORT.width, VIEWPORT.height, 0x000000, 0.2).setDepth(5);
+
 
     this.drawGround();
     this.createSafeZones();
@@ -68,6 +93,9 @@ export class GameScene extends Phaser.Scene {
     this.muzzleFlash = this.add.image(this.center.x, this.center.y, "muzzle-flash").setScale(2).setAlpha(0).setDepth(1202);
     this.hitMarker = this.add.image(this.center.x, this.center.y, "hit-marker").setScale(2).setAlpha(0).setDepth(1201);
     this.createShotTrailPool();
+    // Gunner position: left-side fixed origin for shot trail visualization.
+    // Defined here so it can be adjusted for different viewport sizes in the future.
+    this.gunnerOrigin = { x: 130, y: GROUND_Y - 34 };
     this.createParticlePool();
 
     this.feedbackLabel = this.add
@@ -88,38 +116,51 @@ export class GameScene extends Phaser.Scene {
     this.bindInput();
     this.bindUiChannel();
     this.runSecurityBaseline();
+    this.audioMuted = this.readAudioMuted();
+    this.audio = new AudioManager(this.time);
+    this.audio.setMuted(this.audioMuted);
     this.emitHudUpdate();
     this.emitRunState({ showStart: true });
+    this.emitAudioState();
   }
 
   drawGround() {
-    // Sidewalk band (top) + asphalt (bottom) with a strong curb line as foot contact reference.
-    this.add.rectangle(this.center.x, GROUND_Y - 14, VIEWPORT.width, 40, 0x9ca3af, 0.98).setDepth(18);
-    this.add.rectangle(this.center.x, GROUND_Y + 54, VIEWPORT.width, 128, 0x334155, 0.98).setDepth(19);
-    this.add.rectangle(this.center.x, GROUND_Y, VIEWPORT.width, 4, 0xe2e8f0, 1).setDepth(26);
+    // Sidewalk band (top) + asphalt (bottom)
+    this.add.rectangle(this.center.x, GROUND_Y - 20, VIEWPORT.width, 40, 0x334155, 1).setDepth(18);
+    this.add.rectangle(this.center.x, GROUND_Y + 54, VIEWPORT.width, 128, 0x1e293b, 1).setDepth(19);
+    this.add.rectangle(this.center.x, GROUND_Y, VIEWPORT.width, 4, 0x475569, 1).setDepth(26);
+    this.add.rectangle(this.center.x, GROUND_Y + 18, VIEWPORT.width, 8, 0x111827, 0.45).setDepth(20);
+    this.add.rectangle(this.center.x, GROUND_Y - 34, VIEWPORT.width, 10, 0x475569, 0.95).setDepth(17);
+
+    // Traffic lines
+    for (let i = 0; i < 10; i++) {
+      this.add.rectangle(i * 120, GROUND_Y + 50, 40, 3, 0x64748b, 0.4).setDepth(21);
+    }
+
+    this.add.image(132, GROUND_Y + 34, "prop-car-wreck").setOrigin(0.5, 1).setScale(1.2).setDepth(23).setAlpha(0.95);
+    this.add.image(310, GROUND_Y - 6, "prop-barricade").setOrigin(0.5, 1).setScale(1.05).setDepth(23).setAlpha(0.96);
+    this.add.image(520, GROUND_Y + 12, "prop-barricade").setOrigin(0.5, 1).setScale(0.94).setDepth(22).setAlpha(0.82);
+    this.add.image(704, GROUND_Y + 28, "prop-car-wreck").setOrigin(0.5, 1).setScale(0.92).setDepth(21).setAlpha(0.78);
+    this.add.image(804, GROUND_Y - 10, "prop-evac-sign").setOrigin(0.5, 1).setScale(0.92).setDepth(24).setAlpha(0.96);
   }
 
   createParallaxLayers() {
     this.parallaxClouds = [];
-    this.parallaxBuildings = [];
 
     for (let i = 0; i < 7; i += 1) {
       const x = Phaser.Math.Between(-80, VIEWPORT.width + 80);
       const y = Phaser.Math.Between(46, 168);
       const width = Phaser.Math.Between(70, 130);
-      const cloud = this.add.rectangle(x, y, width, 16, 0xf8fafc, 0.9).setDepth(4);
-      cloud.speed = Phaser.Math.FloatBetween(10, 24);
+      const cloud = this.add.rectangle(x, y, width, 16, 0xf8fafc, 0.4).setDepth(4); // Nubes más tenues
+      cloud.speed = Phaser.Math.FloatBetween(5, 12); // Más lentas
       this.parallaxClouds.push(cloud);
     }
+  }
 
-    for (let i = 0; i < 16; i += 1) {
-      const x = i * 72;
-      const width = Phaser.Math.Between(34, 60);
-      const height = Phaser.Math.Between(90, 190);
-      const block = this.add.rectangle(x, GROUND_Y - height / 2, width, height, 0x475569, 0.38).setDepth(10);
-      block.speed = 18;
-      this.parallaxBuildings.push(block);
-    }
+  createAtmosphereLayers() {
+    this.skyPulse = this.add.circle(this.center.x, 110, 190, 0x38bdf8, 0.06).setDepth(3);
+    this.dangerHaze = this.add.ellipse(170, 250, 260, 140, 0xef4444, 0.045).setDepth(6);
+    this.cityGlow = this.add.rectangle(this.center.x, 184, VIEWPORT.width, 120, 0x0f172a, 0.08).setDepth(2);
   }
 
   createShotTrailPool() {
@@ -146,6 +187,9 @@ export class GameScene extends Phaser.Scene {
       .setOrigin(0.5, 1)
       .setScale(2.1)
       .setDepth(350);
+    this.bunkerHalo = this.add.circle(VIEWPORT.width - 42, GROUND_Y - 28, 58, 0x38bdf8, 0.08).setDepth(349);
+    this.bunkerCone = this.add.triangle(VIEWPORT.width - 56, GROUND_Y - 86, 0, 120, 74, 0, 148, 120, 0x38bdf8, 0.08).setDepth(348).setAngle(-8);
+    this.bunkerBeacon = this.add.rectangle(VIEWPORT.width - 42, GROUND_Y - 42, 18, 8, 0x38bdf8, 0.35).setDepth(351);
   }
 
   bindInput() {
@@ -157,7 +201,7 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.input.on("pointerdown", () => {
-      this.ensureAudioContext();
+      this.audio.ensure();
       this.handleShot();
     });
 
@@ -184,21 +228,50 @@ export class GameScene extends Phaser.Scene {
       assetPaths: [
         "/assets/sprites/background-city.svg",
         "/assets/sprites/zombie-pixel.svg",
+        "/assets/sprites/zombie-pixel-step.svg",
+        "/assets/sprites/zombie-office.svg",
+        "/assets/sprites/zombie-office-step.svg",
+        "/assets/sprites/zombie-urban.svg",
+        "/assets/sprites/zombie-urban-step.svg",
+        "/assets/sprites/zombie-rager.svg",
+        "/assets/sprites/zombie-rager-step.svg",
+        "/assets/sprites/zombie-alpha.svg",
+        "/assets/sprites/zombie-alpha-step.svg",
+        "/assets/sprites/zombie-brute.svg",
+        "/assets/sprites/zombie-brute-step.svg",
+        "/assets/sprites/zombie-dead.svg",
         "/assets/sprites/civilian-pixel.svg",
+        "/assets/sprites/civilian-pixel-step.svg",
+        "/assets/sprites/civilian-dead.svg",
+        "/assets/sprites/civilian-infected.svg",
+        "/assets/sprites/civilian-office.svg",
+        "/assets/sprites/civilian-office-step.svg",
+        "/assets/sprites/civilian-casual.svg",
+        "/assets/sprites/civilian-casual-step.svg",
+        "/assets/sprites/civilian-urban.svg",
+        "/assets/sprites/civilian-urban-step.svg",
         "/assets/sprites/crosshair-pixel.svg",
         "/assets/sprites/muzzle-flash.svg",
         "/assets/sprites/hit-marker.svg",
         "/assets/sprites/powerup-health.svg",
         "/assets/sprites/powerup-rescue.svg",
+        "/assets/sprites/prop-car-wreck.svg",
+        "/assets/sprites/prop-barricade.svg",
+        "/assets/sprites/prop-evac-sign.svg",
         "/assets/sprites/safe-bunker.svg"
       ],
       exposeDebugEndpoints: false,
       dynamicScriptExecution: false
     });
 
+    // NOTE: This is a development-time audit tool, not a runtime enforcement gate.
+    // It confirms that the declared asset paths conform to the local-asset policy
+    // defined in securityPolicy.js. A failure here does NOT block gameplay — it
+    // signals a policy drift that should be resolved before shipping. If you need
+    // a hard block on policy violations, throw here instead of warning.
     if (!security.ok) {
       // eslint-disable-next-line no-console
-      console.warn("Security policy warnings:", security.reasons);
+      console.warn("Security policy warnings (audit only, non-blocking):", security.reasons);
     }
   }
 
@@ -257,6 +330,7 @@ export class GameScene extends Phaser.Scene {
     this.recentCivilLossTimes = [];
     this.crosshairOverCivilian = false;
     this.lastCrosshairWarnAt = 0;
+    this.lastCriticalAlertAt = 0;
     this.emitHudUpdate();
   }
 
@@ -303,6 +377,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.updateCrosshairHazardVisual();
+    this.processCriticalStateAudio();
     this.processDangerIndicators();
     this.processZombieCivilianContacts();
     this.checkLevelProgress(time);
@@ -324,6 +399,18 @@ export class GameScene extends Phaser.Scene {
   }
 
   updateParallax(delta) {
+    const now = this.time.now;
+    if (this.skyPulse) {
+      this.skyPulse.setAlpha(0.045 + Math.abs(Math.sin(now * 0.0014)) * 0.04);
+      this.skyPulse.setScale(1 + Math.sin(now * 0.0011) * 0.04);
+    }
+    if (this.dangerHaze) {
+      this.dangerHaze.setPosition(170 + Math.sin(now * 0.0008) * 18, 250 + Math.cos(now * 0.0009) * 8);
+      this.dangerHaze.setAlpha(0.035 + Math.abs(Math.sin(now * 0.0017)) * 0.03);
+    }
+    if (this.cityGlow) {
+      this.cityGlow.setAlpha(0.06 + Math.abs(Math.sin(now * 0.0012)) * 0.03);
+    }
     for (const cloud of this.parallaxClouds) {
       cloud.x -= cloud.speed * delta;
       if (cloud.x < -120) {
@@ -331,18 +418,11 @@ export class GameScene extends Phaser.Scene {
         cloud.y = Phaser.Math.Between(40, 170);
       }
     }
-
-    for (const building of this.parallaxBuildings) {
-      building.x -= building.speed * delta;
-      if (building.x < -60) {
-        building.x = VIEWPORT.width + Phaser.Math.Between(20, 100);
-      }
-    }
   }
 
   beginWave() {
     const profile = this.getDifficultyProfile();
-    const spawnCount = 6 + this.state.level * 2 + this.state.wave * 2;
+    const spawnCount = 10 + this.state.level * 4 + this.state.wave * 3;
     const composition = buildWaveComposition(spawnCount);
     const civiliansOnly = [];
     for (let i = 0; i < composition.civilians; i += 1) {
@@ -403,8 +483,8 @@ export class GameScene extends Phaser.Scene {
     const lane = this.pickLane();
     const fromLeft = true;
     const x = fromLeft ? -42 : VIEWPORT.width + 42;
-
-    const visual = this.acquireCivilianVisual(lane, x, fromLeft);
+    const textureKey = CIVILIAN_TEXTURE_KEYS[this.spawnIndex % CIVILIAN_TEXTURE_KEYS.length];
+    const visual = this.acquireCivilianVisual(lane, x, fromLeft, textureKey);
     const sprite = visual.sprite;
     const shadow = visual.shadow;
     const dangerIcon = visual.dangerIcon;
@@ -426,6 +506,9 @@ export class GameScene extends Phaser.Scene {
       bobSpeed: Phaser.Math.FloatBetween(8, 12),
       age: 0,
       spawnIndex: this.spawnIndex,
+      textureKey,
+      altTextureKey: ALT_TEXTURE_MAP[textureKey] ?? textureKey,
+      animationFrame: 0,
       sprite,
       shadow,
       dangerIcon,
@@ -443,6 +526,11 @@ export class GameScene extends Phaser.Scene {
     const profile = this.getDifficultyProfile();
     const lane = this.pickLane();
     const spawnPoint = this.pickZombieSpawnPoint(lane, options.targetCivilianId);
+    
+    // Usar coordenadas personalizadas si se proporcionan (para infecciones)
+    const finalX = options.customX ?? spawnPoint.x;
+    const finalY = options.customY ?? lane.y;
+
     const speedBase = profile.civilianBaseSpeed * Phaser.Math.FloatBetween(profile.zombieChaseMultiplierMin, profile.zombieChaseMultiplierMax);
     const isElite = zombieType === "zombie-elite";
     const isBrute = zombieType === "zombie-brute";
@@ -456,15 +544,12 @@ export class GameScene extends Phaser.Scene {
       speed = profile.civilianBaseSpeed * 1.2 + Phaser.Math.Between(0, 4);
     }
 
-    const visual = this.acquireZombieVisual(zombieType, lane, spawnPoint);
+    const visual = this.acquireZombieVisual(zombieType, lane, { x: finalX, y: finalY });
     const sprite = visual.sprite;
     const shadow = visual.shadow;
 
     const maxHp = isBrute ? 6 : isElite ? 3 : 1;
     const hp = maxHp;
-    if (isBrute) {
-      sprite.setTint(0xef4444);
-    }
 
     const hpBarBg = visual.hpBarBg;
     const hpBarFill = visual.hpBarFill;
@@ -473,8 +558,8 @@ export class GameScene extends Phaser.Scene {
       id,
       type: zombieType,
       lane,
-      x: spawnPoint.x,
-      y: lane.y,
+      x: finalX,
+      y: finalY,
       hitRadius: Math.round((isBrute ? 30 : isElite ? 24 : 18) * lane.scale),
       speed,
       velocityX: 0,
@@ -484,6 +569,9 @@ export class GameScene extends Phaser.Scene {
       zigzagPhase: Phaser.Math.FloatBetween(0, Math.PI * 2),
       age: 0,
       spawnIndex: this.spawnIndex,
+      textureKey: visual.textureKey,
+      altTextureKey: ALT_TEXTURE_MAP[visual.textureKey] ?? visual.textureKey,
+      animationFrame: 0,
       sprite,
       shadow,
       hp,
@@ -570,6 +658,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   updateEntity(entity, delta) {
+    if (entity.isBeingRescued) return;
     entity.age += delta;
 
     if (entity.type === "civilian") {
@@ -585,8 +674,20 @@ export class GameScene extends Phaser.Scene {
       entity.shadow.setScale(1.15 * entity.lane.shadowScale, 0.32 * entity.lane.shadowScale * compression);
       entity.shadow.setPosition(entity.x, entity.lane.y + 2);
 
-      entity.sprite.setPosition(entity.x, entity.y);
-      entity.dangerIcon.setPosition(entity.x, entity.y - 58 * entity.lane.scale);
+      const bobOffset = Math.sin(entity.age * 10 + entity.bobPhase) * 3 * entity.lane.scale;
+      const strideAngle = Math.sin(entity.age * 14 + entity.bobPhase) * 3.5;
+      const frame = Math.sin(entity.age * 14 + entity.bobPhase) > 0 ? 1 : 0;
+      if (frame !== entity.animationFrame) {
+        entity.animationFrame = frame;
+        entity.sprite.setTexture(frame === 1 ? entity.altTextureKey : entity.textureKey);
+      }
+      entity.sprite
+        .setPosition(entity.x, entity.y + bobOffset)
+        .setAngle(strideAngle)
+        .setScale((2 + Math.sin(entity.age * 14) * 0.03) * entity.lane.scale);
+      entity.dangerIcon
+        .setPosition(entity.x, entity.y - 58 * entity.lane.scale + bobOffset)
+        .setScale(1 + Math.abs(Math.sin(entity.age * 9)) * 0.12);
 
       if ((entity.direction > 0 && entity.x >= VIEWPORT.width - 18) || (entity.direction < 0 && entity.x <= 18)) {
         this.handleCivilianEscaped(entity);
@@ -623,10 +724,18 @@ export class GameScene extends Phaser.Scene {
       entity.y += entity.velocityY * delta;
       entity.knockbackTimer = Math.max(0, entity.knockbackTimer - delta);
 
-      entity.sprite.setPosition(entity.x, entity.y);
+      const stepWave = Math.sin(entity.age * (entity.isBrute ? 7 : entity.isElite ? 11 : 9) + entity.zigzagPhase);
+      const frame = stepWave > 0 ? 1 : 0;
+      if (frame !== entity.animationFrame) {
+        entity.animationFrame = frame;
+        entity.sprite.setTexture(frame === 1 ? entity.altTextureKey : entity.textureKey);
+      }
+      entity.sprite
+        .setPosition(entity.x, entity.y + stepWave * (entity.isBrute ? 2.5 : 1.8) * entity.lane.scale)
+        .setAngle(stepWave * (entity.isBrute ? 2.4 : entity.isElite ? 4.4 : 3.1));
       entity.shadow.setPosition(entity.x, entity.lane.y + 2);
       entity.shadow.setScale(
-        (entity.isBrute ? 1.46 : 1.18) * entity.lane.shadowScale,
+        (entity.isBrute ? 1.46 : 1.18) * entity.lane.shadowScale * (1 - Math.abs(stepWave) * 0.04),
         (entity.isBrute ? 0.4 : 0.34) * entity.lane.shadowScale
       );
 
@@ -638,13 +747,18 @@ export class GameScene extends Phaser.Scene {
         entity.hpBarFill.setPosition(entity.x - (barWidth * (1 - ratio)) / 2, entity.y - yOffset);
         entity.hpBarFill.width = barWidth * ratio;
       }
+
+      // Auto-eliminación si sale de la pantalla para evitar oleadas bloqueadas
+      if (entity.x < -150 || entity.x > VIEWPORT.width + 150) {
+        this.removeEntity(entity.id);
+      }
       return;
     }
 
     if (entity.type === "powerup-health" || entity.type === "powerup-rescue") {
       entity.x += entity.direction * entity.speed * delta;
       entity.y += Math.sin(entity.age * 3.7) * 8 * delta;
-      entity.sprite.setPosition(entity.x, entity.y);
+      entity.sprite.setPosition(entity.x, entity.y).setRotation(Math.sin(entity.age * 2.2) * 0.08).setScale(2.2 + Math.sin(entity.age * 5) * 0.06);
       entity.glow.setPosition(entity.x, entity.y);
       entity.glow.setRadius(18 + Math.sin(entity.age * 8) * 4);
 
@@ -655,19 +769,167 @@ export class GameScene extends Phaser.Scene {
   }
 
   handleCivilianEscaped(entity) {
-    this.state = applyCivilianSaved(this.state, 1);
-    this.state.score += 10;
-    this.removeEntity(entity.id);
-    this.playSfx("powerup-positive");
+    if (entity.isBeingRescued) return;
+    entity.isBeingRescued = true;
+    
+    // Coordenadas precisas de la puerta del búnker
+    const doorX = this.bunker.x - 24; 
+    const doorY = this.bunker.y - 12;
 
-    if (this.state.civiliansSaved >= this.state.civiliansGoal) {
-      this.finishLevel();
+    // Salto de victoria (festejo)
+    this.tweens.add({
+      targets: entity.sprite,
+      y: entity.y - 45,
+      duration: 160,
+      yoyo: true,
+      ease: "Cubic.Out",
+      onComplete: () => {
+        // El búnker "abre" su puerta (resplandor interno)
+        const doorLight = this.add.rectangle(doorX, doorY - 15, 20, 30, 0x38bdf8, 0.4).setDepth(351);
+        this.tweens.add({ targets: doorLight, alpha: 0.1, duration: 150, yoyo: true });
+
+        // Animación de entrada real (se mueve a la puerta y se encoje hacia adentro)
+        this.tweens.add({
+          targets: [entity.sprite, entity.shadow],
+          x: doorX,
+          y: doorY,
+          scaleX: 0,
+          scaleY: 0.2,
+          alpha: 0,
+          duration: 300,
+          ease: "Power2.In",
+          onComplete: () => {
+            doorLight.destroy();
+            this.state = applyCivilianSaved(this.state, 1);
+            this.state.score += 10;
+            this.emitPowerupParticles(doorX, doorY, 0x38bdf8);
+            this.showFeedbackAt("SAFE! +1", doorX - 60, doorY - 80, "positive");
+            this.removeEntity(entity.id);
+            this.audio.playSfx("powerup-positive");
+            this.events.emit("hud:pulse-saved");
+
+            if (this.state.civiliansSaved >= this.state.civiliansGoal) {
+              this.finishLevel();
+            }
+          }
+        });
+
+        // Sacudida de impacto al búnker (como si se cerrara la puerta)
+        this.tweens.add({
+          targets: this.bunker,
+          scaleY: 1.9,
+          duration: 80,
+          yoyo: true,
+          ease: "Quad.Out"
+        });
+      }
+    });
+  }
+
+  showFeedbackAt(text, x, y, tone) {
+    const colorByTone = {
+      friendly: "#fecaca",
+      danger: "#fca5a5",
+      positive: "#bbf7d0"
+    };
+
+    const label = this.add.text(x, y, text, {
+      fontFamily: "Verdana",
+      fontSize: "24px",
+      fontWeight: "bold",
+      color: colorByTone[tone] ?? "#f8fafc",
+      stroke: "#020617",
+      strokeThickness: 4
+    }).setOrigin(0.5).setDepth(2000);
+
+    this.tweens.add({
+      targets: label,
+      y: y - 60,
+      alpha: 0,
+      duration: 1000,
+      ease: "Cubic.Out",
+      onComplete: () => label.destroy()
+    });
+  }
+
+  animateCivilianDown(entity, mode = "friendly") {
+    if (!entity?.sprite || !this.entities.has(entity.id)) {
+      return;
     }
+
+    entity.exitKind = "civilian";
+    entity.type = "civilian-dying";
+    entity.hitRadius = 0;
+    entity.sprite.setTexture(mode === "infected" ? "npc-civilian-infected" : "npc-civilian-dead");
+    entity.dangerIcon?.setVisible(false);
+    entity.sprite.setDepth(entity.lane.depth + 140);
+    entity.shadow?.setAlpha(0.2);
+
+    this.tweens.add({
+      targets: entity.sprite,
+      angle: mode === "infected" ? 8 : 90,
+      alpha: mode === "infected" ? 0.88 : 0,
+      y: entity.y + (mode === "infected" ? -8 : 10),
+      scaleX: mode === "infected" ? entity.sprite.scaleX * 1.06 : entity.sprite.scaleX * 0.88,
+      scaleY: mode === "infected" ? entity.sprite.scaleY * 1.06 : entity.sprite.scaleY * 0.72,
+      duration: mode === "infected" ? 260 : 220,
+      ease: mode === "infected" ? "Sine.Out" : "Cubic.Out",
+      onComplete: () => {
+        this.removeEntity(entity.id);
+      }
+    });
+  }
+
+  animateZombieDeath(entity) {
+    if (!entity?.sprite || !this.entities.has(entity.id)) {
+      return;
+    }
+
+    entity.exitKind = "zombie";
+    entity.type = "zombie-dying";
+    entity.hitRadius = 0;
+    entity.sprite.setTexture("enemy-zombie-dead");
+    entity.sprite.setOrigin(0.5, 0.7);
+    entity.hpBarBg?.setVisible(false);
+    entity.hpBarFill?.setVisible(false);
+
+    this.tweens.add({
+      targets: entity.sprite,
+      angle: Phaser.Math.Between(-16, 16),
+      y: entity.y + 10,
+      alpha: 0,
+      scaleX: entity.sprite.scaleX * 1.08,
+      scaleY: entity.sprite.scaleY * 0.74,
+      duration: 240,
+      ease: "Cubic.Out",
+      onComplete: () => {
+        entity.sprite.setOrigin(0.5, 1);
+        this.removeEntity(entity.id);
+      }
+    });
+    this.tweens.add({
+      targets: entity.shadow,
+      alpha: 0,
+      duration: 240,
+      ease: "Quad.Out"
+    });
   }
 
   processDangerIndicators() {
     const civilians = this.getEntitiesByType("civilian");
     const zombies = this.getEntitiesByTypes(["zombie", "zombie-elite", "zombie-brute"]);
+    if (this.bunkerBeacon) {
+      this.bunkerBeacon.setAlpha(0.26 + Math.abs(Math.sin(this.time.now * 0.006)) * 0.32);
+      this.bunkerBeacon.setScale(1 + Math.abs(Math.sin(this.time.now * 0.004)) * 0.08, 1);
+    }
+    if (this.bunkerHalo) {
+      this.bunkerHalo.setAlpha(0.04 + Math.abs(Math.sin(this.time.now * 0.0038)) * 0.06);
+      this.bunkerHalo.setRadius(54 + Math.abs(Math.sin(this.time.now * 0.003)) * 9);
+    }
+    if (this.bunkerCone) {
+      this.bunkerCone.setAlpha(0.05 + Math.abs(Math.sin(this.time.now * 0.0027)) * 0.05);
+      this.bunkerCone.setAngle(-10 + Math.sin(this.time.now * 0.0012) * 4);
+    }
 
     for (const civil of civilians) {
       let inDanger = false;
@@ -684,16 +946,18 @@ export class GameScene extends Phaser.Scene {
 
       if (inDanger && !civil.wasInDanger) {
         civil.inDangerSince = this.time.now;
-        this.playSfx("civilian-scream");
+        this.audio.playSfx("civilian-scream");
       }
 
       if (inDanger) {
         const blink = Math.sin((this.time.now - civil.inDangerSince) / 80) > 0;
         civil.sprite.setAlpha(blink ? 1 : 0.6);
         civil.sprite.setDepth(civil.lane.depth + 120);
+        civil.dangerIcon.setAlpha(0.45 + Math.abs(Math.sin((this.time.now - civil.inDangerSince) / 120)) * 0.55);
       } else {
         civil.sprite.setAlpha(1);
         civil.sprite.setDepth(civil.lane.depth + 20);
+        civil.dangerIcon.setAlpha(1);
       }
 
       civil.wasInDanger = inDanger;
@@ -711,28 +975,60 @@ export class GameScene extends Phaser.Scene {
           continue;
         }
 
+        // Bloqueo de muerte off-screen
+        if (civil.x < 30) continue;
+
         const dist = Phaser.Math.Distance.Between(zombie.x, zombie.y, civil.x, civil.y);
         const captureDistance = (zombie.hitRadius + civil.hitRadius) * profile.captureDistanceMultiplier;
+        
         if (dist <= captureDistance) {
-          const isElite = zombie.type === "zombie-elite";
-          const isBrute = zombie.type === "zombie-brute";
-          const lifeDamage = isBrute ? 40 : isElite ? 20 : 10;
-          const savedPenalty = isBrute ? 2 : 0;
-          this.state = applyCivilianLostPenalty(this.state, lifeDamage, { savedPenalty, lostCount: 1 });
-
-          this.recentCivilLossTimes.push(this.time.now);
-          this.removeEntity(zombie.id);
-          this.removeEntity(civil.id);
-          this.showFeedback("CIVIL PERDIDO", "danger");
-          this.flashHudRed(0.34);
-          this.playSfx("danger-alert");
-
-          if (this.state.gameOver) {
-            this.handleGameOver();
-            return;
-          }
+          this.infectCivilian(civil, zombie);
+          return;
         }
       }
+    }
+  }
+
+  infectCivilian(civil, hunter) {
+    const { x, y, lane, id } = civil;
+    this.cameras.main.shake(200, 0.01);
+    this.audio.playSfx("civilian-error");
+    
+    const lifeDamageByType = {
+      zombie: 10,
+      "zombie-elite": 15,
+      "zombie-brute": 20
+    };
+    const lifeDamage = lifeDamageByType[hunter.type] ?? 10;
+    this.state = applyCivilianLostPenalty(this.state, lifeDamage, { lostCount: 1 });
+
+    this.emitBloodPixels(x, y);
+    this.emitPowerupParticles(x, y - 6, 0x22c55e);
+    this.showFeedbackAt("INFECTED!", x, y - 40, "danger");
+    this.impactFlash.setFillStyle(0x22c55e, 1);
+    this.impactFlash.setAlpha(0.16);
+    this.tweens.add({
+      targets: this.impactFlash,
+      alpha: 0,
+      duration: 220,
+      ease: "Sine.Out",
+      onComplete: () => this.impactFlash.setFillStyle(0xffffff, 1)
+    });
+    
+    const nid = `zombie-inf-${this.spawnIndex++}`;
+    this.animateCivilianDown(civil, "infected");
+
+    // Transformación en Zombie
+    this.time.delayedCall(400, () => {
+      this.spawnZombie(nid, "zombie", { 
+        customX: x, 
+        customY: y,
+        targetCivilianId: this.chooseCivilianTargetId(lane.id)
+      });
+    });
+
+    if (this.state.gameOver) {
+      this.handleGameOver();
     }
   }
 
@@ -748,12 +1044,6 @@ export class GameScene extends Phaser.Scene {
   }
 
   getGoalForLevel(level) {
-    if (level <= 1) {
-      return 5;
-    }
-    if (level <= 2) {
-      return 8;
-    }
     if (level <= 4) {
       return 10;
     }
@@ -764,57 +1054,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   getDifficultyProfile() {
-    if (this.state.level <= 2) {
-      return {
-        civilianBaseSpeed: 86,
-        zombieChaseMultiplierMin: 1.2,
-        zombieChaseMultiplierMax: 1.2,
-        maxZombiesSimultaneous: 2,
-        maxCiviliansSimultaneous: 2,
-        spawnIntervalMinMs: 3900,
-        spawnIntervalMaxMs: 4100,
-        captureDistanceMultiplier: 0.78,
-        friendlyFireScorePenalty: 50,
-        friendlyFireLifePenalty: 15,
-        civilianLostLifePenalty: 15,
-        fastZombieChance: 0,
-        routeVariation: false
-      };
-    }
-
-    if (this.state.level <= 4) {
-      return {
-        civilianBaseSpeed: 90,
-        zombieChaseMultiplierMin: 1.2,
-        zombieChaseMultiplierMax: 1.3,
-        maxZombiesSimultaneous: this.state.level === 3 ? 3 : 4,
-        maxCiviliansSimultaneous: 3,
-        spawnIntervalMinMs: 2850,
-        spawnIntervalMaxMs: 3150,
-        captureDistanceMultiplier: 1,
-        friendlyFireScorePenalty: 50,
-        friendlyFireLifePenalty: 15,
-        civilianLostLifePenalty: 15,
-        fastZombieChance: 0.25,
-        routeVariation: true
-      };
-    }
-
-    return {
-      civilianBaseSpeed: 94,
-      zombieChaseMultiplierMin: 1.1,
-      zombieChaseMultiplierMax: 1.3,
-      maxZombiesSimultaneous: this.state.level >= 10 ? 7 : 5,
-      maxCiviliansSimultaneous: this.state.level >= 10 ? 5 : 3,
-      spawnIntervalMinMs: this.state.level >= 10 ? 1100 : 2350,
-      spawnIntervalMaxMs: this.state.level >= 10 ? 1300 : 2650,
-      captureDistanceMultiplier: 1.05,
-      friendlyFireScorePenalty: 50,
-      friendlyFireLifePenalty: 15,
-      civilianLostLifePenalty: 15,
-      fastZombieChance: 0.4,
-      routeVariation: true
-    };
+    return getDifficultyProfile(this.state.level);
   }
 
   finishLevel() {
@@ -838,11 +1078,12 @@ export class GameScene extends Phaser.Scene {
       });
     }
 
-    this.playSfx("level-clear");
+    this.audio.playSfx("level-clear");
     this.emitHudUpdate();
     this.events.emit("level:complete", {
       level: this.state.level,
       score: this.state.score,
+      highScore: this.readHighScore(),
       kills: this.state.kills,
       accuracy: this.state.accuracy ?? 0,
       civiliansSaved: this.state.civiliansSaved,
@@ -899,7 +1140,8 @@ export class GameScene extends Phaser.Scene {
       }
     });
 
-    this.playSfx("shot");
+    this.audio.playSfx("shot");
+    this.cameras.main.shake(100, 0.003);
     this.flashMuzzle();
     this.emitShotTrail(crosshair.x, crosshair.y);
 
@@ -922,21 +1164,22 @@ export class GameScene extends Phaser.Scene {
         civilianPenaltyScore: profile.friendlyFireScorePenalty,
         civilianPenaltyLife: profile.friendlyFireLifePenalty
       });
+      this.cameras.main.shake(250, 0.012);
       this.showFeedback("FRIENDLY FIRE", "friendly");
       this.flashHudRed(0.22);
-      this.playSfx("civilian-error");
-      this.removeEntity(target.id);
+      this.audio.playSfx("civilian-error");
+      this.animateCivilianDown(hitEntity, "friendly");
     } else if (target.type === "powerup-health" || target.type === "powerup-rescue") {
       this.state = applyShotOutcome(this.state, { type: target.type }, { countShot: false });
       this.removeEntity(target.id);
       this.showFeedback(target.type === "powerup-health" ? "+SALUD" : "BONUS +50", "positive");
       this.emitPowerupParticles(crosshair.x, crosshair.y, target.type === "powerup-health" ? 0x22c55e : 0xf59e0b);
-      this.playSfx(target.type === "powerup-health" ? "powerup-positive" : "rescue-bonus");
+      this.audio.playSfx(target.type === "powerup-health" ? "powerup-positive" : "rescue-bonus");
     } else if (target.type === "zombie" || target.type === "zombie-elite" || target.type === "zombie-brute") {
       this.state = registerShotHit(this.state);
       hitEntity.hp -= 1;
       hitEntity.knockbackTimer = 0.1;
-      this.playSfx("zombie-hit");
+      this.audio.playSfx("zombie-hit");
       this.flashImpactWhite(0.12);
       this.emitBloodPixels(hitEntity.x, hitEntity.y - 14);
 
@@ -946,7 +1189,7 @@ export class GameScene extends Phaser.Scene {
         if (hitEntity.isElite || hitEntity.isBrute) {
           this.nextPowerupAt = Math.min(this.nextPowerupAt, this.time.now + 2500);
         }
-        this.removeEntity(target.id);
+        this.animateZombieDeath(hitEntity);
       }
     }
 
@@ -974,7 +1217,7 @@ export class GameScene extends Phaser.Scene {
 
     if (onCivilian && !this.crosshairOverCivilian && this.time.now - this.lastCrosshairWarnAt > 500) {
       this.lastCrosshairWarnAt = this.time.now;
-      this.playSfx("crosshair-warning");
+      this.audio.playSfx("crosshair-warning");
     }
 
     this.crosshairOverCivilian = onCivilian;
@@ -1025,10 +1268,10 @@ export class GameScene extends Phaser.Scene {
     return this.add.ellipse(x, y + 2, 30 * laneScale, 10 * laneScale, 0x000000, 0.3).setDepth(depth);
   }
 
-  acquireCivilianVisual(lane, x, fromLeft) {
+  acquireCivilianVisual(lane, x, fromLeft, textureKey) {
     let visual = this.civilianVisualPool.pop();
     if (!visual) {
-      const sprite = this.add.image(x, lane.y, "npc-civilian").setOrigin(0.5, 1);
+      const sprite = this.add.image(x, lane.y, textureKey).setOrigin(0.5, 1);
       const shadow = this.createGroundShadow(x, lane.y, lane.shadowScale, lane.depth + 1);
       const dangerIcon = this.add
         .text(x, lane.y - 58 * lane.scale, "!", {
@@ -1044,6 +1287,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     visual.sprite
+      .setTexture(textureKey)
       .setPosition(x, lane.y)
       .setScale(2 * lane.scale)
       .setDepth(lane.depth + 20)
@@ -1090,12 +1334,17 @@ export class GameScene extends Phaser.Scene {
     const isElite = zombieType === "zombie-elite";
     const isBrute = zombieType === "zombie-brute";
     const poolIndex = this.zombieVisualPool.findIndex((item) => item.zombieType === zombieType);
+    const textureKey = isBrute
+      ? "enemy-zombie-brute"
+      : isElite
+        ? "enemy-zombie-alpha"
+        : ZOMBIE_TEXTURE_KEYS[this.spawnIndex % ZOMBIE_TEXTURE_KEYS.length];
 
     let visual;
     if (poolIndex >= 0) {
       visual = this.zombieVisualPool.splice(poolIndex, 1)[0];
     } else {
-      const sprite = this.add.image(spawnPoint.x, lane.y, isElite ? "enemy-zombie-alpha" : "enemy-zombie").setOrigin(0.5, 1);
+      const sprite = this.add.image(spawnPoint.x, lane.y, textureKey).setOrigin(0.5, 1);
       const shadow = this.createGroundShadow(spawnPoint.x, lane.y, lane.shadowScale, lane.depth + 1);
       let hpBarBg = null;
       let hpBarFill = null;
@@ -1107,14 +1356,15 @@ export class GameScene extends Phaser.Scene {
     }
 
     visual.zombieType = zombieType;
+    visual.textureKey = textureKey;
     visual.sprite
-      .setTexture(isElite ? "enemy-zombie-alpha" : "enemy-zombie")
+      .setTexture(textureKey)
       .setPosition(spawnPoint.x, lane.y)
       .setVisible(true)
       .setAlpha(1)
-      .setTint(isBrute ? 0xef4444 : 0xffffff)
+      .clearTint()
       .setDepth(lane.depth + (isBrute ? 70 : isElite ? 60 : 50))
-      .setScale((isBrute ? 4 : isElite ? 2.8 : 2) * lane.scale);
+      .setScale((isBrute ? 3.6 : isElite ? 2.8 : 2.1) * lane.scale);
     visual.shadow
       .setPosition(spawnPoint.x, lane.y + 2)
       .setVisible(true)
@@ -1173,17 +1423,11 @@ export class GameScene extends Phaser.Scene {
   }
 
   emitZombieDeathImpact(entity) {
-    this.playSfx("zombie-kill");
+    this.audio.playSfx("zombie-kill");
+    this.cameras.main.shake(150, 0.007);
     this.flashImpactWhite(0.18);
-    this.tweens.add({
-      targets: entity.sprite,
-      x: entity.x + (entity.isBrute ? 20 : entity.isElite ? 14 : 10),
-      alpha: 0,
-      duration: 130,
-      ease: "Cubic.Out"
-    });
-
     this.emitPowerupParticles(entity.x, entity.y - 14, 0xb91c1c);
+    this.emitBloodPixels(entity.x, entity.y - 10);
   }
 
   emitBloodPixels(x, y) {
@@ -1253,8 +1497,8 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    const originX = 130;
-    const originY = GROUND_Y - 34;
+    const originX = this.gunnerOrigin.x;
+    const originY = this.gunnerOrigin.y;
     const dx = targetX - originX;
     const dy = targetY - originY;
     const length = Math.max(4, Math.sqrt(dx * dx + dy * dy));
@@ -1333,6 +1577,8 @@ export class GameScene extends Phaser.Scene {
     this.persistHighScore(this.state.score);
     this.emitHudUpdate();
     this.emitRunState({ showPause: false });
+    this.audio.playSfx("game-over");
+    this.showFeedback("GAME OVER", "danger");
     this.events.emit("game:over", {
       score: this.state.score,
       kills: this.state.kills,
@@ -1342,12 +1588,15 @@ export class GameScene extends Phaser.Scene {
       level: this.state.level,
       accuracy: this.state.accuracy,
       wave: this.state.wave,
-      reason: this.state.gameOverReason
+      reason: this.state.gameOverReason,
+      highScore: this.readHighScore()
     });
   }
 
   emitHudUpdate() {
     const highScore = this.readHighScore();
+    const zombieCount = this.getEntitiesByTypes(["zombie", "zombie-elite", "zombie-brute"]).length;
+    const civilianCount = this.getEntitiesByType("civilian").length;
     this.events.emit("hud:update", {
       score: this.state.score,
       highScore,
@@ -1360,7 +1609,9 @@ export class GameScene extends Phaser.Scene {
       civiliansSaved: this.state.civiliansSaved,
       civiliansGoal: this.state.civiliansGoal,
       civiliansLost: this.state.civiliansLost,
-      civiliansLostLimit: this.state.civiliansLostLimit
+      civiliansLostLimit: this.state.civiliansLostLimit,
+      zombiesActive: zombieCount,
+      civiliansActive: civilianCount
     });
   }
 
@@ -1372,6 +1623,12 @@ export class GameScene extends Phaser.Scene {
       levelCompleted: this.state.levelCompleted,
       showStart,
       showPause
+    });
+  }
+
+  emitAudioState() {
+    this.events.emit("audio:state", {
+      muted: this.audioMuted
     });
   }
 
@@ -1394,6 +1651,35 @@ export class GameScene extends Phaser.Scene {
     } catch {
       // ignore storage failures
     }
+  }
+
+  readAudioMuted() {
+    try {
+      if (typeof window === "undefined" || !window.localStorage) {
+        return false;
+      }
+      return window.localStorage.getItem("zrr.audioMuted") === "1";
+    } catch {
+      return false;
+    }
+  }
+
+  persistAudioMuted(muted) {
+    try {
+      if (typeof window === "undefined" || !window.localStorage) {
+        return;
+      }
+      window.localStorage.setItem("zrr.audioMuted", muted ? "1" : "0");
+    } catch {
+      // Ignore storage failures; runtime audio control still works for the current session.
+    }
+  }
+
+  toggleMute() {
+    this.audioMuted = !this.audioMuted;
+    this.persistAudioMuted(this.audioMuted);
+    this.audio.setMuted(this.audioMuted);
+    this.emitAudioState();
   }
 
   hasType(type) {
@@ -1432,13 +1718,13 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    if (entity.type === "civilian") {
+    if (entity.type === "civilian" || entity.exitKind === "civilian") {
       this.recycleCivilianVisual(entity);
       this.entities.delete(id);
       return;
     }
 
-    if (entity.type === "zombie" || entity.type === "zombie-elite" || entity.type === "zombie-brute") {
+    if (entity.type === "zombie" || entity.type === "zombie-elite" || entity.type === "zombie-brute" || entity.exitKind === "zombie") {
       this.recycleZombieVisual(entity);
       this.entities.delete(id);
       return;
@@ -1498,85 +1784,18 @@ export class GameScene extends Phaser.Scene {
     this.entities.clear();
   }
 
-  ensureAudioContext() {
-    if (this.audioContext) {
-      if (this.audioContext.state === "suspended") {
-        this.audioContext.resume().catch(() => {});
-      }
+  processCriticalStateAudio() {
+    if (!this.audio.audioContext || this.audio.muted || this.state.gameOver || !this.started) {
       return;
     }
 
-    const Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) {
-      return;
-    }
-
-    this.audioContext = new Ctx();
-  }
-
-  playSfx(kind) {
-    if (!this.audioContext) {
-      return;
-    }
-
-    const now = this.audioContext.currentTime;
-    if (kind === "shot") {
-      this.playTone(180, 0.05, "square", 0.05, now);
-      return;
-    }
-    if (kind === "zombie-hit") {
-      this.playTone(120, 0.05, "sawtooth", 0.045, now);
-      return;
-    }
-    if (kind === "zombie-kill") {
-      this.playTone(300, 0.05, "square", 0.04, now);
-      this.playTone(440, 0.06, "triangle", 0.03, now + 0.04);
-      return;
-    }
-    if (kind === "civilian-error") {
-      this.playTone(640, 0.07, "square", 0.03, now);
-      this.playTone(240, 0.1, "square", 0.025, now + 0.08);
-      return;
-    }
-    if (kind === "crosshair-warning") {
-      this.playTone(760, 0.025, "triangle", 0.014, now);
-      return;
-    }
-    if (kind === "danger-alert") {
-      this.playTone(200, 0.12, "sawtooth", 0.03, now);
-      return;
-    }
-    if (kind === "civilian-scream") {
-      this.playTone(520, 0.08, "triangle", 0.018, now);
-      return;
-    }
-    if (kind === "powerup-positive") {
-      this.playTone(420, 0.06, "triangle", 0.03, now);
-      this.playTone(560, 0.08, "triangle", 0.02, now + 0.05);
-      return;
-    }
-    if (kind === "rescue-bonus") {
-      this.playTone(360, 0.06, "triangle", 0.03, now);
-      this.playTone(520, 0.09, "triangle", 0.025, now + 0.05);
-      return;
-    }
-    if (kind === "level-clear") {
-      this.playTone(520, 0.09, "triangle", 0.03, now);
-      this.playTone(660, 0.1, "triangle", 0.024, now + 0.1);
+    const now = this.time.now;
+    const lifeCritical = this.state.life <= 25;
+    const civiliansCritical = this.state.civiliansLostLimit - this.state.civiliansLost <= 1;
+    if ((lifeCritical || civiliansCritical) && now - this.lastCriticalAlertAt > 1600) {
+      this.lastCriticalAlertAt = now;
+      this.audio.playSfx("critical-alert");
     }
   }
 
-  playTone(frequency, duration, waveType, volume, startAt) {
-    const oscillator = this.audioContext.createOscillator();
-    const gain = this.audioContext.createGain();
-    oscillator.type = waveType;
-    oscillator.frequency.setValueAtTime(frequency, startAt);
-
-    gain.gain.setValueAtTime(volume, startAt);
-    gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
-
-    oscillator.connect(gain).connect(this.audioContext.destination);
-    oscillator.start(startAt);
-    oscillator.stop(startAt + duration);
-  }
 }

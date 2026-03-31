@@ -1,0 +1,588 @@
+{
+  "test_plan": {
+    "strategy": "Validate the upgraded Phaser-based embeddable game through deterministic rule tests, browser integration checks, responsive embed-layout validation, and end-to-end player-flow verification against the new product baseline.",
+    "coverage_goal": "80%",
+    "test_types": [
+      "unit",
+      "integration",
+      "e2e"
+    ]
+  },
+  "type_coverage_matrix": [
+    {
+      "requirement_id": "FR-001",
+      "unit": "SHOULD",
+      "integration": "MUST",
+      "e2e": "MUST"
+    },
+    {
+      "requirement_id": "FR-002",
+      "unit": "SHOULD",
+      "integration": "MUST",
+      "e2e": "MUST"
+    },
+    {
+      "requirement_id": "FR-003",
+      "unit": "MUST",
+      "integration": "MUST",
+      "e2e": "SHOULD"
+    },
+    {
+      "requirement_id": "FR-004",
+      "unit": "MUST",
+      "integration": "MUST",
+      "e2e": "SHOULD"
+    },
+    {
+      "requirement_id": "FR-005",
+      "unit": "SHOULD",
+      "integration": "MUST",
+      "e2e": "MUST"
+    },
+    {
+      "requirement_id": "FR-006",
+      "unit": "SHOULD",
+      "integration": "MUST",
+      "e2e": "MUST"
+    },
+    {
+      "requirement_id": "FR-007",
+      "unit": "MUST",
+      "integration": "MUST",
+      "e2e": "SHOULD"
+    }
+  ],
+  "test_cases": [
+    {
+      "id": "TC-001",
+      "requirement_id": "FR-001",
+      "title": "Local operator reaches first playable state with documented flow",
+      "type": "e2e",
+      "scenario": "happy_path",
+      "priority": "high",
+      "preconditions": [
+        "Node.js 18+ and npm 10+ are installed",
+        "Dependencies have not yet been installed in the repository"
+      ],
+      "given": "A clean checkout of the repository root is available on a standard desktop machine with Node.js 18+ and npm 10+",
+      "when": "The operator runs `npm install` and `npm run dev`, then opens `http://127.0.0.1:5173/` in a desktop browser",
+      "then": "The first playable state is reachable in 5 minutes or less from the repository root and the start overlay is visible",
+      "steps": [
+        "Install dependencies from the repository root",
+        "Start the local Vite dev server",
+        "Open the documented localhost URL",
+        "Confirm the title, objective text, and Start button are visible"
+      ],
+      "expected_result": "A local operator can reach the first playable state with the documented setup flow in 5 minutes or less from the repository root on a standard Node.js environment.",
+      "test_data": {
+        "url": "http://127.0.0.1:5173/",
+        "max_minutes": 5
+      }
+    },
+    {
+      "id": "TC-002",
+      "requirement_id": "FR-001",
+      "title": "Embedded container renders correctly at 800x450",
+      "type": "integration",
+      "scenario": "happy_path",
+      "priority": "high",
+      "preconditions": [
+        "A host page can render the game in an iframe or bounded container"
+      ],
+      "given": "The game is mounted inside an 800x450 container",
+      "when": "The start overlay and first gameplay frame are rendered in the container",
+      "then": "The main playfield is not clipped and primary controls remain visible inside the 800x450 container",
+      "steps": [
+        "Open the game inside a fixed 800x450 host container",
+        "Inspect the title overlay and active gameplay frame",
+        "Verify that the main lane, HUD, and primary Start action are all visible"
+      ],
+      "expected_result": "In a standard 800x450 embedded container, the game renders without clipping the main playfield or hiding primary controls.",
+      "test_data": {
+        "container_width": 800,
+        "container_height": 450
+      }
+    },
+    {
+      "id": "TC-003",
+      "requirement_id": "FR-001",
+      "title": "Player can start a run within 30 seconds using only visible instructions",
+      "type": "e2e",
+      "scenario": "negative",
+      "priority": "high",
+      "preconditions": [
+        "First-time player has no prior explanation from an operator"
+      ],
+      "given": "A first-time player opens the game and sees only the visible title, objective, and controls on the start overlay",
+      "when": "The player attempts to begin a run without outside help",
+      "then": "The player starts an active run within 30 seconds of the initial load using only visible on-screen instructions",
+      "steps": [
+        "Load the start screen",
+        "Remove any external written instructions or spoken explanation",
+        "Observe whether the player can identify and use the Start action"
+      ],
+      "expected_result": "A first-time player can start an active run within 30 seconds of the initial load using only visible on-screen instructions.",
+      "test_data": {
+        "max_seconds": 30
+      }
+    },
+    {
+      "id": "TC-004",
+      "requirement_id": "FR-002",
+      "title": "Crosshair remains visible and gameplay-critical targets are readable",
+      "type": "e2e",
+      "scenario": "happy_path",
+      "priority": "high",
+      "preconditions": [
+        "An active gameplay session is running with at least one civilian and one zombie visible"
+      ],
+      "given": "A first-time observer watches an active run with civilians, zombies, bunker, and HUD visible",
+      "when": "The observer is given 1 second to identify the crosshair and distinguish threat vs protected target",
+      "then": "The crosshair remains visible throughout active gameplay and primary targets can be distinguished in less than 1 second by a first-time observer",
+      "steps": [
+        "Start a run and wait until civilians and zombies are simultaneously visible",
+        "Confirm the custom crosshair is visible",
+        "Time whether a first-time observer can identify civilian vs zombie in under 1 second"
+      ],
+      "expected_result": "The custom crosshair remains visible throughout active gameplay and primary targets can be distinguished in less than 1 second by a first-time observer.",
+      "test_data": {
+        "max_identification_seconds": 1
+      }
+    },
+    {
+      "id": "TC-005",
+      "requirement_id": "FR-002",
+      "title": "Mouse aim and left-click shot work in every active gameplay state",
+      "type": "integration",
+      "scenario": "happy_path",
+      "priority": "high",
+      "preconditions": [
+        "Game session is in active play and not paused, completed, or game over"
+      ],
+      "given": "The player is in an active gameplay state with an unlocked browser pointer",
+      "when": "The player moves the mouse and presses left click",
+      "then": "The player can aim with the mouse and fire with left click in every active gameplay state without additional tutorial steps",
+      "steps": [
+        "Start a run",
+        "Move the pointer across the playable area",
+        "Press left click while the run is active",
+        "Verify the shot fires and the crosshair moves as expected"
+      ],
+      "expected_result": "The player can aim with the mouse and fire with left click in every active gameplay state without additional tutorial steps.",
+      "test_data": {
+        "input_device": "mouse"
+      }
+    },
+    {
+      "id": "TC-006",
+      "requirement_id": "FR-002",
+      "title": "Bunker is recognized as safe endpoint within 30 seconds",
+      "type": "e2e",
+      "scenario": "negative",
+      "priority": "medium",
+      "preconditions": [
+        "First-time player has not previously seen the bunker asset"
+      ],
+      "given": "A first-time player starts the first run and sees civilians moving toward the right-side bunker",
+      "when": "The player is asked where civilians are trying to go within the first 30 seconds of the run",
+      "then": "The player identifies the bunker as the civilian destination and safe endpoint within 30 seconds of entering the first run",
+      "steps": [
+        "Start a run",
+        "Let the player observe the scene without explanation",
+        "Ask the player to identify the civilians' goal"
+      ],
+      "expected_result": "A first-time player can identify the bunker as the civilian destination and safe endpoint within 30 seconds of entering the first run.",
+      "test_data": {
+        "max_seconds": 30
+      }
+    },
+    {
+      "id": "TC-007",
+      "requirement_id": "FR-003",
+      "title": "Friendly fire applies exact score and life penalty immediately",
+      "type": "integration",
+      "scenario": "happy_path",
+      "priority": "high",
+      "preconditions": [
+        "A civilian is visible and targetable in active gameplay",
+        "Current score is 100 and current life is 100"
+      ],
+      "given": "The run is active, score is 100, life is 100, and one civilian is under the crosshair",
+      "when": "The player fires one left-click shot that hits the civilian",
+      "then": "Score becomes 85, life becomes 90, and negative visual and audio feedback occur in the same interaction or next rendered frame",
+      "steps": [
+        "Set score to 100 and life to 100 in a deterministic test state",
+        "Place one civilian under the crosshair",
+        "Fire one shot",
+        "Assert score, life, and feedback outputs"
+      ],
+      "expected_result": "A player-shot civilian immediately applies -15 score and -10 life with negative visual and audio feedback in the same interaction or next rendered frame.",
+      "test_data": {
+        "initial_score": 100,
+        "initial_life": 100,
+        "expected_score": 85,
+        "expected_life": 90
+      }
+    },
+    {
+      "id": "TC-008",
+      "requirement_id": "FR-003",
+      "title": "Zombie contact damage by category uses exact values",
+      "type": "unit",
+      "scenario": "edge_case",
+      "priority": "high",
+      "preconditions": [
+        "Rule helper can apply civilian-loss penalties for each zombie category"
+      ],
+      "given": "A session state starts at life 100 and civiliansLost 0",
+      "when": "Normal, elite/alpha, and brute contact rules are applied separately",
+      "then": "Normal contact leaves life 90 and civiliansLost 1, elite/alpha contact leaves life 85 and civiliansLost 1, and brute contact leaves life 80 and civiliansLost 1",
+      "steps": [
+        "Create isolated session state with life 100 and civiliansLost 0",
+        "Apply normal zombie contact rule",
+        "Apply elite/alpha zombie contact rule",
+        "Apply brute zombie contact rule"
+      ],
+      "expected_result": "Normal, elite/alpha, and brute zombie contact apply 10, 15, and 20 life damage respectively and each successful contact increments civilians lost by exactly 1.",
+      "test_data": {
+        "initial_life": 100,
+        "expected_normal_life": 90,
+        "expected_elite_life": 85,
+        "expected_brute_life": 80
+      }
+    },
+    {
+      "id": "TC-009",
+      "requirement_id": "FR-003",
+      "title": "Overlap targeting stays deterministic across repeated identical frames",
+      "type": "unit",
+      "scenario": "negative",
+      "priority": "high",
+      "preconditions": [
+        "Target resolver can receive repeated identical entity arrays"
+      ],
+      "given": "A civilian and a normal zombie overlap under the same crosshair position with identical coordinates and spawn order across 20 repeated evaluations",
+      "when": "The shot target resolver is executed 20 times with the exact same crosshair and entity inputs",
+      "then": "The same target is returned in all 20 evaluations with no variation",
+      "steps": [
+        "Construct one repeated overlap frame with stable input data",
+        "Execute target resolution 20 times",
+        "Compare all returned target IDs"
+      ],
+      "expected_result": "When multiple entities overlap under the crosshair, hit resolution returns the same target outcome across repeated identical overlap conditions.",
+      "test_data": {
+        "repetitions": 20
+      }
+    },
+    {
+      "id": "TC-010",
+      "requirement_id": "FR-004",
+      "title": "Baseline exposes exactly three zombie categories",
+      "type": "unit",
+      "scenario": "happy_path",
+      "priority": "high",
+      "preconditions": [
+        "Enemy type table or runtime categories are inspectable"
+      ],
+      "given": "The game baseline enemy definitions are loaded",
+      "when": "The enemy categories are enumerated for active gameplay",
+      "then": "Exactly three enemy categories exist: normal zombie, elite/alpha zombie, and brute zombie",
+      "steps": [
+        "Inspect the runtime category definitions",
+        "Enumerate all gameplay enemy categories",
+        "Confirm the exact category count and names"
+      ],
+      "expected_result": "The game exposes exactly three enemy categories in the product baseline: normal zombie, elite/alpha zombie, and brute zombie.",
+      "test_data": {
+        "expected_categories": [
+          "zombie",
+          "zombie-elite",
+          "zombie-brute"
+        ]
+      }
+    },
+    {
+      "id": "TC-011",
+      "requirement_id": "FR-004",
+      "title": "Threat escalates by measurable gameplay factor across levels",
+      "type": "integration",
+      "scenario": "happy_path",
+      "priority": "high",
+      "preconditions": [
+        "Level progression data is available"
+      ],
+      "given": "Level 1 and Level 5 are initialized under the same test harness",
+      "when": "Spawn interval, active threat limit, and enemy pressure values are compared",
+      "then": "At least one measurable factor such as spawn rate, active threat volume, enemy durability, or chase pressure increases between Level 1 and Level 5",
+      "steps": [
+        "Initialize level 1 profile",
+        "Initialize level 5 profile",
+        "Compare measurable difficulty outputs"
+      ],
+      "expected_result": "Each level increases threat through at least one measurable factor such as spawn rate, active threat volume, enemy durability, or chase pressure.",
+      "test_data": {
+        "compare_levels": [
+          1,
+          5
+        ]
+      }
+    },
+    {
+      "id": "TC-012",
+      "requirement_id": "FR-004",
+      "title": "Wave model mixes threat and protection pressure without fixed ratio dependency",
+      "type": "integration",
+      "scenario": "edge_case",
+      "priority": "medium",
+      "preconditions": [
+        "Wave generation or spawn orchestration can be observed over multiple cycles"
+      ],
+      "given": "Three consecutive waves are simulated in the same level under deterministic test timing",
+      "when": "Active civilians and threats are sampled across the wave sequence",
+      "then": "Each sampled wave includes both threat pressure and civilian-protection pressure, while the test does not assert a fixed zombie-to-civilian ratio",
+      "steps": [
+        "Start one deterministic level session",
+        "Sample three wave windows",
+        "Verify presence of both civilian-protection and threat pressure in each wave"
+      ],
+      "expected_result": "Wave composition includes both threat and protection pressure, but requirements do not depend on a fixed zombie-to-civilian spawn ratio.",
+      "test_data": {
+        "waves_sampled": 3
+      }
+    },
+    {
+      "id": "TC-013",
+      "requirement_id": "FR-005",
+      "title": "HUD shows score, level, civilians saved/lost, and best-run context",
+      "type": "e2e",
+      "scenario": "happy_path",
+      "priority": "high",
+      "preconditions": [
+        "An active run is visible at 800x450 and 1280x720"
+      ],
+      "given": "The game is running at 800x450 and then at 1280x720 with a visible active session",
+      "when": "The HUD is inspected during active gameplay",
+      "then": "Current score, level, civilians saved, civilians lost, and current or best run context are all visible during active gameplay",
+      "steps": [
+        "Start a run at 800x450",
+        "Inspect HUD fields",
+        "Repeat at 1280x720",
+        "Confirm all required values remain visible"
+      ],
+      "expected_result": "The HUD displays current score, level, civilians saved, civilians lost, and current or best run context during active gameplay.",
+      "test_data": {
+        "viewports": [
+          "800x450",
+          "1280x720"
+        ]
+      }
+    },
+    {
+      "id": "TC-014",
+      "requirement_id": "FR-005",
+      "title": "Run closure reports score before restart or continuation",
+      "type": "integration",
+      "scenario": "edge_case",
+      "priority": "high",
+      "preconditions": [
+        "Game can enter both level-complete and game-over states"
+      ],
+      "given": "One run ends in level complete at score 220 and another run ends in game over at score 145",
+      "when": "The summary overlays are shown before any restart or continuation action",
+      "then": "Each summary reports the player's achieved score before restart or continuation becomes available",
+      "steps": [
+        "Force one level-complete outcome with score 220",
+        "Inspect the level-complete summary",
+        "Force one game-over outcome with score 145",
+        "Inspect the game-over summary"
+      ],
+      "expected_result": "A run ends with a clear game-over or level-closure state that reports the player's achieved score before restart or continuation.",
+      "test_data": {
+        "level_complete_score": 220,
+        "game_over_score": 145
+      }
+    },
+    {
+      "id": "TC-015",
+      "requirement_id": "FR-005",
+      "title": "High score survives browser reload through localStorage",
+      "type": "integration",
+      "scenario": "negative",
+      "priority": "high",
+      "preconditions": [
+        "Browser localStorage is available",
+        "A run score higher than the current record can be produced"
+      ],
+      "given": "localStorage key `zrr.highScore` starts at value `120` and the current run ends with score `185`",
+      "when": "The game persists the score, the browser reloads, and the HUD is rendered again",
+      "then": "localStorage key `zrr.highScore` equals `185` after reload and the best score is displayed as 185 in the next session",
+      "steps": [
+        "Set localStorage `zrr.highScore` to 120",
+        "Finish a run with score 185",
+        "Reload the page",
+        "Read localStorage and HUD best score"
+      ],
+      "expected_result": "The highest recorded score persists across a browser reload in 100% of standard local runs where localStorage is available.",
+      "test_data": {
+        "initial_best_score": 120,
+        "new_run_score": 185
+      }
+    },
+    {
+      "id": "TC-016",
+      "requirement_id": "FR-006",
+      "title": "Shipped gameplay-critical art contains no placeholder geometry or mixed final-art styles",
+      "type": "integration",
+      "scenario": "happy_path",
+      "priority": "high",
+      "preconditions": [
+        "Final gameplay-critical assets are available in the build artifact"
+      ],
+      "given": "The shipped build contains gameplay-critical character, bunker, crosshair, and HUD assets",
+      "when": "The art set is reviewed against the asset manifest and final build render output",
+      "then": "Gameplay-critical characters, bunker, crosshair, and HUD use a consistent visual style with no placeholder geometry or mixed final-art styles in the shipped build",
+      "steps": [
+        "Open the shipped build",
+        "Inspect gameplay-critical assets on screen",
+        "Cross-check them against the asset inventory"
+      ],
+      "expected_result": "Gameplay-critical characters, bunker, crosshair, and HUD use a consistent visual style with no placeholder geometry or mixed final-art styles in the shipped build.",
+      "test_data": {
+        "asset_classes": [
+          "characters",
+          "bunker",
+          "crosshair",
+          "hud"
+        ]
+      }
+    },
+    {
+      "id": "TC-017",
+      "requirement_id": "FR-006",
+      "title": "Major action classes produce distinct visual and audio feedback within timing threshold",
+      "type": "e2e",
+      "scenario": "happy_path",
+      "priority": "high",
+      "preconditions": [
+        "Audio context has been unlocked by player interaction"
+      ],
+      "given": "An active session can trigger shooting, zombie hit, zombie death, civilian damage, level complete, and game over events",
+      "when": "Each event is triggered once in an instrumented test session",
+      "then": "Each major action class has a distinct feedback signal and audio playback starts within 100ms of the trigger event on an unlocked audio context",
+      "steps": [
+        "Unlock audio with first interaction",
+        "Trigger each major action class event",
+        "Measure feedback timing and compare signal distinctness"
+      ],
+      "expected_result": "Every major action class — shooting, zombie hit, zombie death, civilian damage, level complete, and game over — has a distinct feedback signal, with audio playback starting within 100ms of the trigger event on an unlocked audio context.",
+      "test_data": {
+        "max_audio_start_ms": 100
+      }
+    },
+    {
+      "id": "TC-018",
+      "requirement_id": "FR-006",
+      "title": "HUD remains legible at 800x450 and 1280x720 without overlap",
+      "type": "e2e",
+      "scenario": "negative",
+      "priority": "high",
+      "preconditions": [
+        "HUD is visible in active gameplay"
+      ],
+      "given": "The game is rendered once at 800x450 and once at 1280x720",
+      "when": "HUD text and overlays are inspected while score, level, civilians saved, civilians lost, and accuracy are all non-zero",
+      "then": "HUD text remains legible at 800x450 and 1280x720 with no overlap that obscures score, level, civilians saved, civilians lost, or accuracy",
+      "steps": [
+        "Render active gameplay at 800x450 with populated HUD values",
+        "Inspect overlap and readability",
+        "Render active gameplay at 1280x720 with populated HUD values",
+        "Inspect overlap and readability"
+      ],
+      "expected_result": "HUD text remains legible at 800x450 and 1280x720 with no overlap that obscures score, level, civilians saved, civilians lost, or accuracy.",
+      "test_data": {
+        "viewports": [
+          "800x450",
+          "1280x720"
+        ]
+      }
+    },
+    {
+      "id": "TC-019",
+      "requirement_id": "FR-007",
+      "title": "Gameplay-critical assets are fully represented in inventory and ASSETS documentation",
+      "type": "integration",
+      "scenario": "happy_path",
+      "priority": "high",
+      "preconditions": [
+        "Boot asset loader paths are available",
+        "Asset manifest and ASSETS.md exist"
+      ],
+      "given": "The shipped runtime loads gameplay-critical visual and audio assets from local paths and the repository contains `public/assets/manifest.json` plus `ASSETS.md`",
+      "when": "All gameplay-critical loaded asset paths are compared against the asset inventory and ASSETS documentation",
+      "then": "100% of gameplay-critical visual and audio assets loaded by the shipped runtime are listed in the project asset inventory and documented in ASSETS.md",
+      "steps": [
+        "Enumerate gameplay-critical loaded assets from the runtime loader",
+        "Cross-check each asset against `public/assets/manifest.json`",
+        "Cross-check each asset against `ASSETS.md`"
+      ],
+      "expected_result": "100% of gameplay-critical visual and audio assets loaded by the shipped runtime are listed in the project asset inventory and documented in ASSETS.md.",
+      "test_data": {
+        "inventory_files": [
+          "public/assets/manifest.json",
+          "ASSETS.md"
+        ]
+      }
+    },
+    {
+      "id": "TC-020",
+      "requirement_id": "FR-007",
+      "title": "Runtime rejects non-local executable dependency paths",
+      "type": "unit",
+      "scenario": "negative",
+      "priority": "high",
+      "preconditions": [
+        "Security policy helper can evaluate candidate asset paths"
+      ],
+      "given": "Candidate asset paths include `https://cdn.example.com/zombie.js`, `javascript:alert(1)`, `/assets/sprites/zombie-pixel.svg`, and `/assets/../secrets.txt`",
+      "when": "The security policy evaluates these paths for runtime safety",
+      "then": "The browser runtime accepts only the local-safe asset path and rejects non-local or unsafe executable paths",
+      "steps": [
+        "Evaluate the four candidate asset paths through the security helper",
+        "Collect accepted and rejected results",
+        "Assert that only the safe local asset path is accepted"
+      ],
+      "expected_result": "The browser runtime performs no gameplay-critical remote script execution and no third-party executable asset loading during a standard session.",
+      "test_data": {
+        "candidate_paths": [
+          "https://cdn.example.com/zombie.js",
+          "javascript:alert(1)",
+          "/assets/sprites/zombie-pixel.svg",
+          "/assets/../secrets.txt"
+        ]
+      }
+    },
+    {
+      "id": "TC-021",
+      "requirement_id": "FR-007",
+      "title": "Normal play exposes no admin or debug route to end users",
+      "type": "integration",
+      "scenario": "edge_case",
+      "priority": "medium",
+      "preconditions": [
+        "Game is running in standard local or embedded mode"
+      ],
+      "given": "The game is running in standard local play mode and the player has access only to the shipped browser surface",
+      "when": "The browser routes, visible controls, and standard runtime interactions are inspected during normal play",
+      "then": "The embedded or local runtime exposes no admin or debug route to an end user during normal play",
+      "steps": [
+        "Start the game in local or embedded mode",
+        "Inspect visible controls and routes",
+        "Review normal runtime interactions for admin/debug entry points"
+      ],
+      "expected_result": "The embedded or local runtime exposes no admin or debug route to an end user during normal play.",
+      "test_data": {
+        "mode": "standard-play"
+      }
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 // TC-1: Validate us-1 primary behavior
 // Acceptance Criteria: AC-1
-// AC-1: Given a running wave with at least one civilian visible, when the player left-clicks and hits that civilian, then score decreases by 50, player life decreases by 15 (or one equivalent strike as specified), and the game shows visual and audio penalty feedback immediately.
+// AC-1: Given a running wave with at least one civilian visible, when the player left-clicks and hits that civilian, then score decreases by 15, player life decreases by 10, and the game shows visual and audio penalty feedback immediately.
 import test from "node:test";
 import assert from "node:assert/strict";
 
@@ -13,8 +13,8 @@ test("tc_1_validate_us_1_primary_behavior", async () => {
 
   assert.equal(result.ac1Satisfied, true);
   assert.equal(result.selectedTarget.type, "civilian");
-  assert.equal(result.state.score, -50);
-  assert.equal(result.state.life, 85);
+  assert.equal(result.state.score, -15);
+  assert.equal(result.state.life, 90);
   assert.equal(result.state.lastFeedback.kind, "civilian-penalty");
   assert.equal(result.state.lastFeedback.audio, "civilian-error");
 });

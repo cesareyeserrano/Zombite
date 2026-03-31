@@ -1,0 +1,90 @@
+{
+  "phase": "4",
+  "generated_at": "2026-03-10T00:00:00.000Z",
+  "files_created": [
+    "README.md",
+    "public/assets/manifest.json",
+    "src/contracts/fr-1-the-system-must-run-locally-with.js",
+    "src/modules/module-zombite3-service/gameRules.js",
+    "src/scenes/GameScene.js",
+    "src/scenes/UIScene.js",
+    "tests/zombite3/generated/tc-1-validate-us-1-primary-behavior.test.mjs",
+    "tests/zombite3/generated/tc-2-validate-us-2-primary-behavior.test.mjs",
+    "tests/zombite3/generated/tc-5-to-10-consolidated-runtime.test.mjs",
+    "tests/zombite3/tests.md"
+  ],
+  "setup_commands": [
+    "npm install",
+    "npm run dev",
+    "npm test",
+    "npm run build"
+  ],
+  "implementation_scope": {
+    "product_surface": "src",
+    "delivery_mode": [
+      "local QA",
+      "embeddable browser container"
+    ],
+    "stack": [
+      "Phaser 3",
+      "Vite",
+      "localStorage",
+      "local assets only"
+    ]
+  },
+  "files_touched": [
+    "README.md",
+    "public/assets/manifest.json",
+    "src/contracts/fr-1-the-system-must-run-locally-with.js",
+    "src/modules/module-zombite3-service/gameRules.js",
+    "src/scenes/GameScene.js",
+    "src/scenes/UIScene.js",
+    "tests/zombite3/generated/tc-1-validate-us-1-primary-behavior.test.mjs",
+    "tests/zombite3/generated/tc-2-validate-us-2-primary-behavior.test.mjs",
+    "tests/zombite3/generated/tc-5-to-10-consolidated-runtime.test.mjs",
+    "tests/zombite3/tests.md"
+  ],
+  "implemented_capabilities": [
+    {
+      "fr_id": "FR-001",
+      "status": "implemented",
+      "notes": "Local startup, embeddable 16:9 runtime host, start/pause/restart/next-level flow, and production build verified."
+    },
+    {
+      "fr_id": "FR-002",
+      "status": "implemented",
+      "notes": "Fixed-camera rescue-shooter loop with bunker destination, visible crosshair, civilian/zombie readability, and active run overlays."
+    },
+    {
+      "fr_id": "FR-003",
+      "status": "implemented",
+      "notes": "Friendly fire and zombie-contact rules aligned to the approved baseline with deterministic target priority."
+    },
+    {
+      "fr_id": "FR-004",
+      "status": "implemented",
+      "notes": "Three zombie categories, escalation by level, and flexible threat/protection wave pressure remain active."
+    },
+    {
+      "fr_id": "FR-005",
+      "status": "implemented",
+      "notes": "HUD exposes score, life, level, civilians saved/lost, accuracy, and best score through localStorage persistence."
+    },
+    {
+      "fr_id": "FR-006",
+      "status": "implemented",
+      "notes": "Distinct visual/audio feedback exists for shot, zombie hit, zombie death, civilian damage, level complete, and game over."
+    },
+    {
+      "fr_id": "FR-007",
+      "status": "implemented",
+      "notes": "Gameplay-critical assets are local-safe, inventory-backed, and guarded by runtime asset security policy."
+    }
+  ],
+  "verification_commands": [
+    "npm test",
+    "npm run build"
+  ],
+  "environment_variables": [],
+  "technical_debt": []
+}
