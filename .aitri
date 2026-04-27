@@ -26,14 +26,44 @@
     "failed": 0,
     "skipped": 0
   },
-  "updatedAt": "2026-03-31T18:07:07.833Z",
+  "updatedAt": "2026-04-27T21:33:13.125Z",
   "verifyTimestamp": "2026-03-10T17:51:52.750Z",
   "createdAt": "2026-03-31T17:31:02.595Z",
-  "aitriVersion": "0.1.70",
+  "aitriVersion": "2.0.0-alpha.4",
   "artifactsDir": ".",
   "lastSession": {
     "at": "2026-03-31T18:07:07.833Z",
     "agent": "unknown",
     "event": "feature init stabilizacion"
-  }
+  },
+  "verifyRanAt": "2026-03-31T18:05:34.637Z",
+  "events": [
+    {
+      "at": "2026-04-24T20:05:20.622Z",
+      "event": "upgrade_migration",
+      "phase": "upgrade",
+      "from_version": "0.1.65",
+      "to_version": "2.0.0-alpha.2",
+      "category": "stateMissing",
+      "target": ".aitri#verifyRanAt",
+      "transform": "backfill verifyRanAt from 04_TEST_RESULTS.json mtime"
+    },
+    {
+      "at": "2026-04-24T20:05:20.623Z",
+      "event": "upgrade_migration",
+      "phase": "upgrade",
+      "from_version": "0.1.65",
+      "to_version": "2.0.0-alpha.2",
+      "category": "stateMissing",
+      "target": ".aitri#normalizeState",
+      "transform": "stamp normalizeState baseline (method=git) — Phase 4 was approved without one"
+    }
+  ],
+  "normalizeState": {
+    "baseRef": "4f8f3e2a440b5baa09ef6fe15f5fe6cf878d40a2",
+    "method": "git",
+    "status": "resolved",
+    "lastRun": "2026-04-24T20:05:20.623Z"
+  },
+  "upgradeFindings": []
 }
